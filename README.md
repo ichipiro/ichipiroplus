@@ -15,7 +15,7 @@
 ```bash
 
 # リポジトリのクローン
-git clone git@github.com:53-gm/ichipiroplus-front.git
+git clone git@github.com:ichipiro/ichipiroplus-front.git
 cd ichipiroplus-front
 
 # パッケージのインストール
@@ -24,7 +24,7 @@ npm install
 
 ### 環境変数の設定
 
-`.env` ファイルをプロジェクトのルートに作成します。必要な環境変数はIEのNotion内いちぴろぷらすページに記載されています。
+`.env` ファイルをプロジェクトのルートに作成します。必要な環境変数は[IEのNotion内いちぴろぷらすページ](https://www.notion.so/env-1d5e013eb8eb80128174efb8d2c09665?pvs=4)に記載されています。
 
 ### 開発サーバーの起動
 
