@@ -1,0 +1,259 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                  String         @id @default(cuid())
+  email               String?        @unique
+  emailVerified       DateTime?
+  name                String?
+  image               String?
+  
+  // Profile fields
+  username            String         @unique @default(cuid())
+  displayName         String         @default("")
+  introduction        String?
+  facultyId           String?
+  departmentId        String?
+  grade               Int?
+  isProfileComplete   Boolean        @default(false)
+  isAdmin             Boolean        @default(false)
+  
+  // Relations
+  accounts            Account[]
+  sessions            Session[]
+  registrations       Registration[]
+  tasks               Task[]
+  subscriptions       PushSubscription[]
+  articles            Article[]
+  lectures            Lecture[]
+  pushNotificationLogs PushNotificationLog[]
+  faculty             Faculty?       @relation(fields: [facultyId], references: [id])
+  department          Department?    @relation(fields: [departmentId], references: [id])
+  
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+
+model Faculty {
+  id          String       @id @default(cuid())
+  name        String
+  departments Department[]
+  users       User[]
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Department {
+  id         String        @id @default(cuid())
+  name       String
+  facultyId  String
+  faculty    Faculty       @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  users      User[]
+  lectures   Lecture[]     @relation("LectureDepartments")
+  
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Term {
+  id        String     @id @default(cuid())
+  year      Int        // 年度 (2024, 2025...)
+  number    Int        // ターム番号 (1-4)
+  name      String     // 表示名 ("2024年度 第1ターム（春）")
+  startDate DateTime
+  endDate   DateTime
+  
+  registrations Registration[]
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  @@unique([year, number]) // 年度+ターム番号で一意
+}
+
+model Schedule {
+  id         Int        @id
+  day        Int        // 1-5 (月-金)
+  time       Int        // 1-7 (時限)
+
+  lectures   Lecture[]  @relation("LectureSchedules")
+  
+  @@unique([day, time])
+}
+
+model Lecture {
+  id                String         @id @default(cuid())
+  
+  // 識別情報
+  syllabusCode      String?        @unique // 公式シラバスコード（スクレイピング元のID）
+  
+  // 基本情報
+  name              String
+  instructor        String
+  room              String?
+  grade             Int            @default(1)
+  
+  // シラバス由来の詳細情報
+  units             Float          @default(0)
+  purpose           String?        @db.Text
+  goal              String?        @db.Text
+  description       String?        @db.Text
+  evalMethod        String?        @db.Text
+  textbook          String?        @db.Text
+  feedback          String?        @db.Text
+  isRequired        Boolean        @default(false)
+  isExam            Boolean        @default(false)
+  
+  // 講義固有情報
+  biko              String?
+  isPublic          Boolean        @default(true)
+  isPublicEditable  Boolean        @default(true) // ユーザーが編集可能かどうか
+  
+  // 編集管理（ownerIdを必須に）
+  ownerId           String         // 作成/最終編集者（必須）
+  sourceType        String         @default("scraped") // "scraped" | "user_created"
+  
+  // ターム情報（概念的な番号1-4の配列）
+  termNumbers       Int[]          // [1, 2] = 第1・第2ターム
+  
+  // リレーション
+  schedules         Schedule[]     @relation("LectureSchedules")
+  departments       Department[]   @relation("LectureDepartments")
+  registrations     Registration[]
+  
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  @@index([syllabusCode])
+  @@index([name])
+  @@index([ownerId])
+  User User[]
+}
+
+model Registration {
+  id              String   @id @default(cuid())
+  userId          String
+  lectureId       String
+  termId          String   // Term との直接的なリレーション
+  attendanceCount Int      @default(0)
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lecture         Lecture  @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  term            Term     @relation(fields: [termId], references: [id])
+  tasks           Task[]
+  
+  registeredAt    DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([userId, lectureId, termId])
+}
+
+model Task {
+  id             String        @id @default(cuid())
+  userId         String
+  registrationId String?
+  title          String
+  description    String?
+  dueDate        DateTime?
+  priority       Int           @default(2) // 1: Low, 2: Medium, 3: High
+  status         Int           @default(1) // 1: Todo, 2: In Progress, 3: Done
+  
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registration   Registration? @relation(fields: [registrationId], references: [id])
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model PushSubscription {
+  id             String   @id @default(cuid())
+  userId         String
+  endpoint       String   @db.Text
+  p256dh         String   @db.Text
+  auth           String   @db.Text
+  taskReminders  Boolean  @default(true)
+  newArticles    Boolean  @default(true)
+  systemNotices  Boolean  @default(true)
+  
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([userId, endpoint])
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  content     String   @db.Text
+  isPublished Boolean  @default(false)
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PushNotificationLog {
+  id               String   @id @default(cuid())
+  userId           String
+  title            String
+  body             String   @db.Text
+  url              String?
+  notificationType String   // 'task', 'article', 'system', 'lecture' など
+  status           String   @default("sent") // 'sent', 'failed'
+  
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  sentAt           DateTime @default(now())
+  
+  @@index([userId, sentAt])
+}

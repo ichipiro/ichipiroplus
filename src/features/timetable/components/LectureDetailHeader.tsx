@@ -1,19 +1,16 @@
 import DateFormat from "@/components/DateFormat";
-import UpdateLectureButton from "@/features/timetable/components/UpdateLectureButton";
 import type { Registration } from "@/features/timetable/types";
-import { auth } from "@/lib/auth";
 import {
   Card,
   CardBody,
   CardHeader,
-  HStack,
   Heading,
   Spacer,
   Tag,
   Text,
   Wrap,
 } from "@yamada-ui/react";
-import { notFound } from "next/navigation";
+import { getLectureById } from "../actions/lectures";
 
 interface LectureDetailHeaderProps {
   registration: Registration;
@@ -22,14 +19,7 @@ interface LectureDetailHeaderProps {
 const LectureDetailHeader = async ({
   registration,
 }: LectureDetailHeaderProps) => {
-  const lecture = registration.lecture;
-
-  const session = await auth();
-  const user = session?.user;
-
-  if (!user) {
-    notFound();
-  }
+  const lecture = await getLectureById(registration.lectureId);
 
   return (
     <Card
@@ -45,26 +35,11 @@ const LectureDetailHeader = async ({
         <Heading size="lg">{lecture.name}</Heading>
 
         <Spacer />
-
-        <UpdateLectureButton
-          lecture={lecture}
-          userProfileId={user.profile.profile_id}
-        />
       </CardHeader>
       <CardBody>
         <Wrap gap="xs">
-          {lecture.is_required && <Tag colorScheme="red">必修</Tag>}
-          {lecture.is_exam && <Tag colorScheme="purple">期末試験あり</Tag>}
-          {lecture.terms.map(term => (
-            <Tag key={term.number} colorScheme="blue">
-              第{term.number}ターム
-            </Tag>
-          ))}
-          {lecture.departments.map(dept => (
-            <Tag key={dept.id} colorScheme="teal">
-              {dept.name}
-            </Tag>
-          ))}
+          {lecture.room && <Tag colorScheme="blue">教室: {lecture.room}</Tag>}
+          {lecture.grade && <Tag colorScheme="teal">{lecture.grade}年生</Tag>}
         </Wrap>
 
         <Text>
@@ -75,21 +50,9 @@ const LectureDetailHeader = async ({
           <strong>教室</strong>: {lecture.room || "未設定"}
         </Text>
 
-        <HStack>
-          <Text fontWeight="bold">開講日時:</Text>
-          <Wrap gap="xs">
-            {lecture.schedules.map(schedule => (
-              <Tag size="sm" key={`${schedule.day}-${schedule.time}`}>
-                {["月", "火", "水", "木", "金", "土", "日"][schedule.day - 1]}曜
-                {schedule.time}限
-              </Tag>
-            ))}
-          </Wrap>
-        </HStack>
-
         <DateFormat
-          createdAt={registration.registered_at}
-          updatedAt={registration.registered_at}
+          createdAt={registration.registeredAt.toISOString()}
+          updatedAt={registration.registeredAt.toISOString()}
         />
       </CardBody>
     </Card>

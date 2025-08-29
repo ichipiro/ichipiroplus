@@ -1,4 +1,5 @@
 import DateFormat from "@/components/DateFormat";
+import type { UserWithRelations } from "@/features/user/types";
 import { RefreshCwIcon } from "@yamada-ui/lucide";
 import {
   Avatar,
@@ -17,11 +18,12 @@ import type { Article } from "../types";
 
 interface ArticleCardProps {
   article: Article;
+  user: UserWithRelations;
 }
 
-const ArticleCard = ({ article }: ArticleCardProps) => {
-  const articlePath = `/${article.author.profile_id}/articles/${article.slug}`;
-  const authorProfilePath = `/${article.author.profile_id}`;
+const ArticleCard = ({ article, user }: ArticleCardProps) => {
+  const articlePath = `/${user.username}/articles/${article.id}`;
+  const authorProfilePath = `/${user.username}`;
 
   return (
     <Card as={LinkBox} border="1px solid" borderColor="gray.500">
@@ -34,18 +36,19 @@ const ArticleCard = ({ article }: ArticleCardProps) => {
       <CardBody>
         {/* 投稿日、更新日 */}
         <DateFormat
-          createdAt={article.created_at}
-          updatedAt={article.updated_at}
+          createdAt={article.createdAt.toISOString()}
+          updatedAt={article.updatedAt.toISOString()}
           createMessage="投稿日"
           updateMessage={<RefreshCwIcon />}
         />
 
         {/* 著者情報 */}
+
         <Link href={authorProfilePath}>
           <HStack gap={3} rounded="md">
             <Avatar
-              name={article.author.display_name || ""}
-              src={article.author.picture || ""}
+              name={user.displayName || ""}
+              src={user.image || ""}
               size="sm"
               border="2px solid"
               borderColor={["white", "black"]}
@@ -53,11 +56,11 @@ const ArticleCard = ({ article }: ArticleCardProps) => {
             />
             <VStack align="start" gap="none">
               <Text fontWeight="bold" fontSize="sm">
-                {article.author.display_name}
+                {user.displayName}
               </Text>
 
               <Text color="gray.500" fontSize="xs">
-                @{article.author.profile_id}
+                @{user.username}
               </Text>
             </VStack>
           </HStack>

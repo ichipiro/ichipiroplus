@@ -16,7 +16,7 @@ import {
 
 interface SettingsTabProps {
   lecture: Lecture;
-  onDeleteRegistration: () => Promise<void>;
+  onDeleteRegistration: () => void;
 }
 
 const LectureSettingsTab = ({

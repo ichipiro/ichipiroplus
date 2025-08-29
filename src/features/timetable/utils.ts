@@ -1,20 +1,26 @@
-import type { Registration } from "./types";
+import type { RegistrationWithRelations } from "./types";
 
 /**
  * 講義登録情報から時間割マップを構築する
  * @param registrations - 講義登録情報の配列
  * @returns 時間割キー（曜日と時限から計算）から登録情報へのマップ
  */
-export const buildRegistrationMap = (registrations: Registration[]) => {
-  const map = new Map<number, Registration>();
-  // biome-ignore lint/complexity/noForEach: <explanation>
-  registrations.forEach(registration => {
-    // biome-ignore lint/complexity/noForEach: <explanation>
-    registration.lecture.schedules.forEach(sch => {
-      const key = (sch.day - 1) * 5 + sch.time;
-      map.set(key, registration);
-    });
-  });
+export const buildRegistrationMap = (
+  registrations: RegistrationWithRelations[],
+) => {
+  const map = new Map<number, RegistrationWithRelations>();
+
+  for (const registration of registrations) {
+    // lecture.schedulesから各スケジュールの曜日と時限を取得してマッピング
+    if (registration.lecture?.schedules) {
+      for (const schedule of registration.lecture.schedules) {
+        // scheduleKeyを計算（曜日-1）* 5 + 時限
+        const key = (schedule.day - 1) * 5 + schedule.time;
+        map.set(key, registration);
+      }
+    }
+  }
+
   return map;
 };
 
@@ -55,3 +61,5 @@ export const getDayTimeByScheduleKey = (scheduleKey: number) => {
   const time = scheduleKey % 5;
   return { day, time };
 };
+
+// buildRegistrationMapFromIds は不要 - includeパターンで統一

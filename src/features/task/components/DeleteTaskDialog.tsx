@@ -6,7 +6,6 @@ import {
   DialogBody,
   DialogFooter,
   DialogHeader,
-  DialogOverlay,
   Text,
 } from "@yamada-ui/react";
 import { useState } from "react";
@@ -37,8 +36,7 @@ const DeleteTaskDialog = ({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
-      <DialogOverlay />
+    <Dialog open={isOpen} onClose={onClose}>
       <DialogBody>
         <DialogHeader>タスクの削除</DialogHeader>
 
@@ -48,7 +46,7 @@ const DeleteTaskDialog = ({
           <Button onClick={onClose}>キャンセル</Button>
           <Button
             colorScheme="red"
-            isLoading={isDeleting}
+            loading={isDeleting}
             onClick={handleConfirmDelete}
             ml={3}
           >

@@ -1,14 +1,14 @@
 "use client";
 
-import { updateUserProfile } from "@/features/user/api";
+import { updateUser } from "@/features/user/actions";
 import {
   type Department,
   type Faculty,
-  type ProfileFormData,
-  ProfileFormSchema,
-  type UserProfile,
+  type UserFormData,
+  UserFormSchema,
+  type UserWithRelations,
 } from "@/features/user/types";
-import { ApiError } from "@/lib/api/client";
+import useActionFeedback from "@/hooks/useActionFeedback";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
@@ -21,23 +21,23 @@ import {
   Text,
   Textarea,
   VStack,
-  useNotice,
 } from "@yamada-ui/react";
+import { useTransition } from "react";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
 import IconUploadField from "./IconUploadField";
 
 interface MyProfileEditFormProps {
   departments: Department[];
   faculties: Faculty[];
-  userProfile: UserProfile;
-  onSuccess?: (data: ProfileFormData) => void;
+  user: UserWithRelations;
+  onSuccess?: (data: UserFormData) => void;
   isFirst?: boolean;
 }
 
 const MyProfileEditForm = ({
   departments,
   faculties,
-  userProfile,
+  user,
   onSuccess,
   isFirst = false,
 }: MyProfileEditFormProps) => {
@@ -47,22 +47,20 @@ const MyProfileEditForm = ({
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<ProfileFormData>({
-    resolver: zodResolver(ProfileFormSchema),
+  } = useForm<UserFormData>({
+    resolver: zodResolver(UserFormSchema),
     defaultValues: {
-      profile_id: userProfile.profile_id,
-      display_name: userProfile.display_name || "",
-      introduction: userProfile.introduction || "",
-      faculty_id: String(userProfile.faculty?.id) || "",
-      department_id: String(userProfile.department?.id) || "",
-      grade: userProfile.grade || 1,
+      username: user.username,
+      displayName: user.displayName || "",
+      introduction: user.introduction || "",
+      facultyId: user.facultyId || undefined,
+      departmentId: user.departmentId || undefined,
+      grade: user.grade || 1,
     },
   });
 
-  const notice = useNotice({
-    style: { maxW: "80%", minW: "60%" },
-    isClosable: true,
-  });
+  const [isPending, startTransition] = useTransition();
+  const { withFeedback } = useActionFeedback();
 
   const facultyItems: SelectItem[] = faculties.map(faculty => ({
     label: faculty.name,
@@ -70,7 +68,7 @@ const MyProfileEditForm = ({
   }));
 
   const availableDepartments = departments.filter(
-    department => String(department.faculty.id) === watch("faculty_id"),
+    department => department.facultyId === watch("facultyId"),
   );
   const departmentItems: SelectItem[] = availableDepartments.map(
     department => ({
@@ -79,57 +77,44 @@ const MyProfileEditForm = ({
     }),
   );
 
-  const onSubmit: SubmitHandler<ProfileFormData> = async data => {
-    try {
-      const parsedData = ProfileFormSchema.safeParse(data);
+  const onSubmit: SubmitHandler<UserFormData> = data => {
+    startTransition(async () => {
+      const parsedData = UserFormSchema.safeParse(data);
       if (!parsedData.success) {
         const errorMessages = parsedData.error.errors.map(err => err.message);
         throw new Error(errorMessages.join(", "));
       }
 
-      await updateUserProfile({
-        ...parsedData.data,
-      });
+      const result = await withFeedback(
+        updateUser({
+          ...parsedData.data,
+          image: parsedData.data.image || undefined,
+        }),
+        {
+          successMessage: "プロフィールが更新されました",
+          successTitle: "通知",
+        },
+      );
 
-      notice({
-        title: "通知",
-        description: "プロフィールが更新されました。",
-        status: "success",
-        duration: 2000,
-        variant: "left-accent",
-      });
-
-      onSuccess?.(data);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        notice({
-          title: "エラー",
-          description: error.message,
-          status: "error",
-        });
-      } else {
-        notice({
-          title: "エラー",
-          description: "不明なエラーが発生しました",
-          status: "error",
-        });
+      if (result) {
+        onSuccess?.(data);
       }
-    }
+    });
   };
 
   return (
     <VStack as="form" onSubmit={handleSubmit(onSubmit)}>
       <IconUploadField
         control={control}
-        username={watch("display_name")}
-        defaultValue={userProfile.picture || ""}
-        errorMessage={errors.picture?.message}
+        username={watch("displayName")}
+        defaultValue={user.image || ""}
+        errorMessage={errors.image?.message}
       />
 
       <FormControl
-        invalid={!!errors.display_name}
+        invalid={!!errors.displayName}
         label="名前(表示名)"
-        errorMessage={errors.display_name?.message}
+        errorMessage={errors.displayName?.message}
         required
         requiredIndicator={
           <Tag size="sm" colorScheme="danger" ms={2}>
@@ -137,13 +122,13 @@ const MyProfileEditForm = ({
           </Tag>
         }
       >
-        <Input placeholder="Ichipiro" {...register("display_name")} />
+        <Input placeholder="Ichipiro" {...register("displayName")} />
       </FormControl>
 
       <FormControl
-        invalid={!!errors.profile_id}
-        label="ユーザーID"
-        errorMessage={errors.profile_id?.message}
+        invalid={!!errors.username}
+        label="ユーザー名"
+        errorMessage={errors.username?.message}
         required
         requiredIndicator={
           <Tag size="sm" colorScheme="danger" ms={2}>
@@ -153,7 +138,7 @@ const MyProfileEditForm = ({
         disabled={!isFirst}
         helperMessage={<Text>基本的に初回以降変更することが出来ません</Text>}
       >
-        <Input placeholder="Ichipiro0003" {...register("profile_id")} />
+        <Input placeholder="Ichipiro0003" {...register("username")} />
       </FormControl>
 
       <FormControl
@@ -167,13 +152,13 @@ const MyProfileEditForm = ({
       </FormControl>
 
       <FormControl
-        invalid={!!errors.faculty_id}
+        invalid={!!errors.facultyId}
         label="学部"
-        errorMessage={errors.faculty_id?.message}
+        errorMessage={errors.facultyId?.message}
         helperMessage={"時間割機能を使用するために必要です"}
       >
         <Controller
-          name="faculty_id"
+          name="facultyId"
           control={control}
           render={({ field }) => (
             <Select placeholder="学部を選択" {...field} items={facultyItems} />
@@ -182,9 +167,9 @@ const MyProfileEditForm = ({
       </FormControl>
 
       <FormControl
-        invalid={!!errors.department_id}
+        invalid={!!errors.departmentId}
         label="学科"
-        errorMessage={errors.department_id?.message}
+        errorMessage={errors.departmentId?.message}
         helperMessage={
           <>
             <Text>時間割機能を使用するために必要です</Text>
@@ -193,7 +178,7 @@ const MyProfileEditForm = ({
         }
       >
         <Controller
-          name="department_id"
+          name="departmentId"
           control={control}
           render={({ field }) => (
             <Select
@@ -225,7 +210,12 @@ const MyProfileEditForm = ({
         />
       </FormControl>
 
-      <Button type="submit" alignSelf="flex-end">
+      <Button
+        type="submit"
+        alignSelf="flex-end"
+        loading={isPending}
+        loadingText="更新中"
+      >
         決定
       </Button>
     </VStack>

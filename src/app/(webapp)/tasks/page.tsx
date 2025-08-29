@@ -1,13 +1,13 @@
-import { getAllTasks } from "@/features/task/api";
+import { getMyTasks } from "@/features/task/actions";
 import TasksDashboard from "@/features/task/components/TaskDashboard";
-import { getRegistrations } from "@/features/timetable/api/registration";
-import { getNowTermAndYear } from "@/features/timetable/api/term";
+import { getMyRegistrations } from "@/features/timetable/actions/registrations";
+import { getCurrentTerm } from "@/features/timetable/actions/terms";
 import { Box, Heading, VStack } from "@yamada-ui/react";
 
 const TasksPage = async () => {
-  const { term, year } = await getNowTermAndYear();
-  const tasks = await getAllTasks();
-  const registrations = await getRegistrations(year, term.number);
+  const term = await getCurrentTerm();
+  const tasks = await getMyTasks();
+  const registrations = await getMyRegistrations(term.id);
 
   return (
     <VStack w="full" align="start">

@@ -1,15 +1,15 @@
-import { getTasksByRegistrationId } from "@/features/task/api";
-import type { Registration } from "@/features/timetable/types";
+import { getMyTasks } from "@/features/task/actions";
+import type { RegistrationWithRelations } from "@/features/timetable/types";
 import { VStack } from "@yamada-ui/react";
 import LectureDetailHeader from "./LectureDetailHeader";
 import LectureDetailTabs from "./LectureDetailTabs";
 
 interface LectureDetailPageProps {
-  registration: Registration;
+  registration: RegistrationWithRelations;
 }
 
 const LectureDetail = async ({ registration }: LectureDetailPageProps) => {
-  const tasks = await getTasksByRegistrationId(registration.id);
+  const tasks = await getMyTasks(undefined, registration.id);
 
   return (
     <VStack align="start" w="full">

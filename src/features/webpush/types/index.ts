@@ -15,7 +15,7 @@ export interface NotificationSettings {
  * プッシュ通知サブスクリプション情報
  */
 export interface PushSubscriptionInfo {
-  id: number;
+  id: string;
   endpoint: string;
   task_reminders: boolean;
   new_articles: boolean;

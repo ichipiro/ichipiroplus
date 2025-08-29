@@ -63,7 +63,7 @@ export async function getOrCreatePushSubscription(): Promise<PushSubscription | 
       );
       subscription = await serviceWorkerRegistration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: applicationServerKey,
+        applicationServerKey: applicationServerKey as BufferSource,
       });
     }
 

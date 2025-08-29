@@ -1,6 +1,6 @@
 "use client";
 
-import useNotificationHandler from "@/hooks/useNotificationHandler";
+import useActionFeedback from "@/hooks/useActionFeedback";
 import {
   Button,
   Card,
@@ -14,31 +14,32 @@ import {
   VStack,
 } from "@yamada-ui/react";
 import { useRouter } from "next/navigation";
-import { registerLecture } from "../api/registration";
-import type { Lecture, Registration } from "../types";
-import UpdateLectureButton from "./UpdateLectureButton";
+import { useTransition } from "react";
+import { registerForLecture } from "../actions/registrations";
+import type { Lecture } from "../types";
 
 interface LectureCardProps {
   lecture: Lecture;
-  userProfileId: string;
-  year: number;
+  termId: string;
 }
 
-const LectureCard = ({ lecture, userProfileId, year }: LectureCardProps) => {
-  const { withNotification } = useNotificationHandler();
+const LectureCard = ({ lecture, termId }: LectureCardProps) => {
+  const { withFeedback } = useActionFeedback();
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
-  const handleRegister = async (id: string) => {
-    const register = await withNotification(registerLecture(id, year), {
-      successTitle: "登録完了",
-      successMessage: (data: Registration) =>
-        `${data.lecture.name}を登録しました`,
+  const handleRegister = (id: string) => {
+    startTransition(async () => {
+      const register = await withFeedback(registerForLecture(id, termId), {
+        successTitle: "登録完了",
+        successMessage: "講義を登録しました",
+      });
+
+      // 登録した講義を反映させるためのリフレッシュ
+      if (register) {
+        router.refresh();
+      }
     });
-
-    // 登録した講義を反映させるためのリフレッシュ
-    if (register) {
-      router.refresh();
-    }
   };
 
   return (
@@ -54,25 +55,12 @@ const LectureCard = ({ lecture, userProfileId, year }: LectureCardProps) => {
           <HStack gap="sm">
             <Tooltip label="シラバスID" placement="top">
               <Tag variant="subtle" colorScheme="blue">
-                {lecture.syllabus || "シラバス無"}
+                {lecture.syllabusCode || "シラバス無"}
               </Tag>
             </Tooltip>
-
-            {lecture.is_required && (
-              <Tag variant="solid" colorScheme="red">
-                必修
-              </Tag>
-            )}
-
-            {lecture.is_exam && <Tag variant="solid">期末テスト</Tag>}
           </HStack>
 
           <Spacer />
-
-          <UpdateLectureButton
-            lecture={lecture}
-            userProfileId={userProfileId}
-          />
         </CardHeader>
         <CardBody>
           <HStack w="full">
@@ -97,7 +85,12 @@ const LectureCard = ({ lecture, userProfileId, year }: LectureCardProps) => {
             <Spacer />
 
             {/* 既存の講義を登録 */}
-            <Button alignSelf="end" onClick={() => handleRegister(lecture.id)}>
+            <Button
+              alignSelf="end"
+              onClick={() => handleRegister(lecture.id)}
+              loading={isPending}
+              isDisabled={isPending}
+            >
               登録
             </Button>
           </HStack>

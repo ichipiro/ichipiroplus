@@ -1,32 +1,50 @@
-import type { Registration } from "@/features/timetable/types";
+import type { Lecture, Registration, Task } from "@prisma/client";
 import { z } from "zod";
 
-/**
- * タスクモデル
- * @see tasks/models.py:Task
- */
-export interface Task {
-  id: string;
-  registration: Registration;
-  title: string;
-  description: string;
-  due_date: string | null;
-  priority: number; // 0: 低, 1: 中, 2: 高
-  status: number; // 0: 未着手, 1: 進行中, 2: 完了
-  created_at: string;
-  updated_at: string;
-}
+export type TaskWithRelations = Task & {
+  registration?:
+    | (Registration & {
+        lecture: Lecture;
+      })
+    | null;
+};
 
-/**
- * タスク作成リクエスト
- */
+export const TaskStatus = {
+  TODO: 1,
+  IN_PROGRESS: 2,
+  DONE: 3,
+} as const;
+
+export const TaskPriority = {
+  LOW: 1,
+  MEDIUM: 2,
+  HIGH: 3,
+} as const;
+
+export type TaskStatusType = (typeof TaskStatus)[keyof typeof TaskStatus];
+export type TaskPriorityType = (typeof TaskPriority)[keyof typeof TaskPriority];
+
+// Form validation schema - プロジェクト標準に合わせる
 export const taskFormSchema = z.object({
   title: z.string().min(1, "タイトルを入力してください"),
   description: z.string().optional(),
-  registration_id: z.string().nullable().optional(),
-  priority: z.number().min(0).max(2),
-  status: z.number().min(0).max(2),
-  due_date: z.date().nullable().optional(),
+  registrationId: z.string().nullable().optional(),
+  priority: z.number().min(1).max(3).default(TaskPriority.MEDIUM),
+  status: z.number().min(1).max(3).default(TaskStatus.TODO),
+  dueDate: z.date().nullable().optional(),
 });
 
 export type TaskFormData = z.infer<typeof taskFormSchema>;
+
+// Server Actions用の型（より明確に）
+export interface CreateTaskData {
+  title: string;
+  description?: string;
+  dueDate?: Date | string;
+  priority?: TaskPriorityType;
+  registrationId?: string;
+}
+
+export interface UpdateTaskData extends Partial<CreateTaskData> {
+  status?: TaskStatusType;
+}

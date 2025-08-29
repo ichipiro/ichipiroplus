@@ -1,61 +1,39 @@
 "use client";
 
 import TasksDashboard from "@/features/task/components/TaskDashboard";
-import type { Task } from "@/features/task/types";
-import { deleteRegistration } from "@/features/timetable/api/registration";
-import type { Registration } from "@/features/timetable/types";
-import { ApiError } from "@/lib/api/client";
-import {
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
-  useNotice,
-} from "@yamada-ui/react";
+import type { RegistrationWithRelations } from "@/features/timetable/types";
+import useActionFeedback from "@/hooks/useActionFeedback";
+import type { Task } from "@prisma/client";
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from "@yamada-ui/react";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { unregisterById } from "../actions/registrations";
 import AttendanceCounter from "./AttendanceCounter";
 import LectureSettingsTab from "./LectureSettingTab";
 
 interface LectureDetailTabsProps {
-  registration: Registration;
+  registration: RegistrationWithRelations;
   tasks: Task[];
 }
 
 const LectureDetailTabs = ({ registration, tasks }: LectureDetailTabsProps) => {
-  const lecture = registration.lecture;
   const router = useRouter();
-  const notice = useNotice();
+  const { withFeedback } = useActionFeedback();
+  const [isPending, startTransition] = useTransition();
 
   // 講義登録を削除
-  const handleDeleteRegistration = async () => {
-    try {
-      // 講義IDで登録を削除
-      await deleteRegistration(registration.id);
-
-      notice({
-        title: "登録削除",
-        description: "講義の登録を削除しました",
-        status: "success",
+  const handleDeleteRegistration = () => {
+    startTransition(async () => {
+      const result = await withFeedback(unregisterById(registration.id), {
+        successMessage: "講義の登録を削除しました",
+        successTitle: "登録削除",
       });
 
-      // 時間割ページにリダイレクト
-      router.push("/timetable");
-    } catch (error) {
-      if (error instanceof ApiError) {
-        notice({
-          title: "エラー",
-          description: error.message,
-          status: "error",
-        });
-      } else {
-        notice({
-          title: "エラー",
-          description: "不明なエラー",
-          status: "error",
-        });
+      if (result !== undefined) {
+        // 時間割ページにリダイレクト
+        router.push("/timetable");
       }
-    }
+    });
   };
 
   return (
@@ -70,7 +48,7 @@ const LectureDetailTabs = ({ registration, tasks }: LectureDetailTabsProps) => {
           <TabPanel>
             <AttendanceCounter
               registrationId={registration.id}
-              initialCount={registration.attendance_count}
+              initialCount={registration.attendanceCount}
               externalSystemUrl="https://ichipol.g.hiroshima-cu.ac.jp/uprx/MobileShibbolethAuthServlet"
             />
           </TabPanel>
@@ -84,7 +62,7 @@ const LectureDetailTabs = ({ registration, tasks }: LectureDetailTabsProps) => {
 
           <TabPanel>
             <LectureSettingsTab
-              lecture={lecture}
+              lecture={registration.lecture}
               onDeleteRegistration={handleDeleteRegistration}
             />
           </TabPanel>

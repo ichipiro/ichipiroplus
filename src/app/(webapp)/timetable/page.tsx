@@ -1,9 +1,10 @@
-import { getNowTermAndYear } from "@/features/timetable/api/term";
+import { getCurrentTerm } from "@/features/timetable/actions/terms";
 import { redirect } from "next/navigation";
 
 const TimeTableOriginPage = async () => {
-  const { term, year } = await getNowTermAndYear();
-  redirect(`/timetable/${year}/${term.number}`);
+  const term = await getCurrentTerm();
+
+  redirect(`/timetable/${term.id}`);
 };
 
 export default TimeTableOriginPage;

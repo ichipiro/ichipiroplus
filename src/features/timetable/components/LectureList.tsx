@@ -1,20 +1,15 @@
 import type { Lecture } from "@/features/timetable/types";
-import { auth } from "@/lib/auth";
+import { getMe } from "@/features/user/actions";
 import { Grid, GridItem, Text } from "@yamada-ui/react";
-import { notFound } from "next/navigation";
 import LectureCard from "./LectureCard";
 
 interface LectureListProps {
   lectures: Lecture[];
-  year: number;
+  termId: string;
 }
 
-const LectureList = async ({ lectures, year }: LectureListProps) => {
-  const session = await auth();
-  const user = session?.user;
-  if (!user) {
-    notFound();
-  }
+const LectureList = async ({ lectures, termId }: LectureListProps) => {
+  const userId = await getMe();
 
   return (
     <>
@@ -32,19 +27,12 @@ const LectureList = async ({ lectures, year }: LectureListProps) => {
         >
           {lectures.map(lecture => {
             //公開でない && 講義作成者でない 場合は表示しない
-            if (
-              !lecture.is_public &&
-              user.profile.profile_id !== lecture.owner?.profile_id
-            ) {
+            if (!lecture.isPublic && userId !== lecture.ownerId) {
               return;
             }
             return (
               <GridItem key={lecture.id}>
-                <LectureCard
-                  lecture={lecture}
-                  userProfileId={user.profile.profile_id}
-                  year={year}
-                />
+                <LectureCard lecture={lecture} termId={termId} />
               </GridItem>
             );
           })}

@@ -1,4 +1,4 @@
-import { uploadImage } from "@/features/article/api";
+import { uploadImage } from "@/features/article/actions";
 import type { AnyExtension } from "@tiptap/core";
 import Blockquote from "@tiptap/extension-blockquote";
 import Bold from "@tiptap/extension-bold";
@@ -61,24 +61,46 @@ export const getExtensions = (): AnyExtension[] => {
 
     // Resizable Media
     ResizableMedia.configure({
-      uploadFn: async image => {
-        const fd = new FormData();
+      uploadFn: async (file: File) => {
+        // FileをBase64に変換
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>(resolve => {
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+        });
+        reader.readAsDataURL(file);
+        const base64 = await base64Promise;
 
-        fd.append("file", image);
-
-        const { url } = await uploadImage(fd);
+        const url = await uploadImage({
+          base64,
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+        });
 
         return url;
       },
     }),
 
     DropZone.configure({
-      uploadFn: async image => {
-        const fd = new FormData();
+      uploadFn: async (file: File) => {
+        // FileをBase64に変換
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>(resolve => {
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+        });
+        reader.readAsDataURL(file);
+        const base64 = await base64Promise;
 
-        fd.append("file", image);
-
-        const { url } = await uploadImage(fd);
+        const url = await uploadImage({
+          base64,
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+        });
 
         return url;
       },
