@@ -1,4 +1,8 @@
-import { getAllDepartments, getAllFaculties } from "@/features/user/api";
+import {
+  getAllDepartments,
+  getAllFaculties,
+  getCurrentUser,
+} from "@/features/user/actions";
 import { auth } from "@/lib/auth";
 import { VStack } from "@yamada-ui/react";
 import { notFound } from "next/navigation";
@@ -11,9 +15,11 @@ const RegisterPage = async () => {
     notFound();
   }
 
-  const user = session.user;
-  const departments = await getAllDepartments();
-  const faculties = await getAllFaculties();
+  const [user, departments, faculties] = await Promise.all([
+    getCurrentUser(),
+    getAllDepartments(),
+    getAllFaculties(),
+  ]);
 
   return (
     <VStack alignItems="center">
@@ -21,6 +27,7 @@ const RegisterPage = async () => {
         departments={departments}
         faculties={faculties}
         user={user}
+        userId={session.user.id}
       />
     </VStack>
   );

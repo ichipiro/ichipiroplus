@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  decrementAttendance,
-  incrementAttendance,
-} from "@/features/timetable/api/attendance";
-import { ApiError } from "@/lib/api/client";
+import useActionFeedback from "@/hooks/useActionFeedback";
 import { ExternalLinkIcon, MinusIcon, PlusIcon } from "@yamada-ui/lucide";
 import {
   Button,
@@ -19,9 +15,12 @@ import {
   Text,
   Tooltip,
   VStack,
-  useNotice,
 } from "@yamada-ui/react";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import {
+  decrementAttendance,
+  incrementAttendance,
+} from "../actions/attendance";
 
 interface AttendanceCounterProps {
   registrationId: string;
@@ -37,71 +36,37 @@ const AttendanceCounter = ({
   lectureName = "講義",
 }: AttendanceCounterProps) => {
   const [attendanceCount, setAttendanceCount] = useState(initialCount);
-  const [isLoading, setIsLoading] = useState(false);
-  const notice = useNotice();
+  const [isPending, startTransition] = useTransition();
+  const { withFeedback } = useActionFeedback();
 
-  const handleAttendanceIncrement = async () => {
-    if (isLoading || attendanceCount >= 15) return;
+  const handleAttendanceIncrement = () => {
+    if (isPending || attendanceCount >= 15) return;
 
-    setIsLoading(true);
-    try {
-      const response = await incrementAttendance(registrationId);
-      setAttendanceCount(response.attendance_count);
-
-      notice({
-        title: "出席登録",
-        description: "出席を記録しました",
-        status: "success",
+    startTransition(async () => {
+      const updated = await withFeedback(incrementAttendance(registrationId), {
+        successMessage: "出席を記録しました",
+        successTitle: "出席登録",
       });
-    } catch (error) {
-      if (error instanceof ApiError) {
-        notice({
-          title: "エラー",
-          description: error.message,
-          status: "error",
-        });
-      } else {
-        notice({
-          title: "エラー",
-          description: "出席の記録に失敗しました",
-          status: "error",
-        });
+
+      if (updated) {
+        setAttendanceCount(updated);
       }
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
-  const handleAttendanceDecrement = async () => {
-    if (isLoading || attendanceCount <= 0) return;
+  const handleAttendanceDecrement = () => {
+    if (isPending || attendanceCount <= 0) return;
 
-    setIsLoading(true);
-    try {
-      const response = await decrementAttendance(registrationId);
-      setAttendanceCount(response.attendance_count);
-
-      notice({
-        title: "出席更新",
-        description: "出席回数を減らしました",
-        status: "info",
+    startTransition(async () => {
+      const updated = await withFeedback(decrementAttendance(registrationId), {
+        successMessage: "出席回数を減らしました",
+        successTitle: "出席更新",
       });
-    } catch (error) {
-      if (error instanceof ApiError) {
-        notice({
-          title: "エラー",
-          description: error.message,
-          status: "error",
-        });
-      } else {
-        notice({
-          title: "エラー",
-          description: "出席の更新に失敗しました",
-          status: "error",
-        });
+
+      if (updated) {
+        setAttendanceCount(updated);
       }
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   const handleExternalSystemNavigate = () => {
@@ -142,7 +107,7 @@ const AttendanceCounter = ({
                 aria-label="出席回数を減らす"
                 icon={<MinusIcon />}
                 onClick={handleAttendanceDecrement}
-                isDisabled={isLoading || attendanceCount <= 0}
+                isDisabled={isPending || attendanceCount <= 0}
                 colorScheme="red"
                 variant="outline"
                 size="lg"
@@ -168,7 +133,7 @@ const AttendanceCounter = ({
                 aria-label="出席を記録する"
                 icon={<PlusIcon />}
                 onClick={handleAttendanceIncrement}
-                isDisabled={isLoading || attendanceCount >= 15}
+                isDisabled={isPending || attendanceCount >= 15}
                 colorScheme="blue"
                 variant="outline"
                 rounded={"full"}

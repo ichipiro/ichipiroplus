@@ -1,4 +1,5 @@
-import { auth, signOut } from "@/lib/auth";
+import { getCurrentUserOptional } from "@/features/user/actions";
+import { signOut } from "@/lib/auth";
 import { UserIcon } from "@yamada-ui/lucide";
 import {
   Avatar,
@@ -14,8 +15,7 @@ import {
 import Link from "next/link";
 
 const UserMenu = async () => {
-  const session = await auth();
-  const userProfile = session?.user?.profile;
+  const user = await getCurrentUserOptional();
   return (
     <>
       <Menu animation="top">
@@ -24,10 +24,10 @@ const UserMenu = async () => {
           as={IconButton}
           variant="unstyled"
           icon={
-            userProfile ? (
+            user ? (
               <Avatar
-                name={userProfile.display_name}
-                src={userProfile.picture || ""}
+                name={user.displayName}
+                src={user.image || ""}
                 width="48px"
                 height="48px"
                 borderRadius="full"
@@ -48,7 +48,7 @@ const UserMenu = async () => {
         />
 
         <MenuList>
-          <MenuGroup label={userProfile?.display_name || "My Account"}>
+          <MenuGroup label={user?.displayName || "My Account"}>
             <Link href="/settings">
               <MenuItem>設定</MenuItem>
             </Link>
@@ -61,7 +61,7 @@ const UserMenu = async () => {
             </Link>
           </MenuGroup>
 
-          {userProfile ? (
+          {user ? (
             <form
               action={async () => {
                 "use server";

@@ -1,4 +1,4 @@
-import { getArticles } from "@/features/article/api";
+import { getArticles } from "@/features/article/actions";
 import ArticleList from "@/features/article/components/ArticleList";
 import { PlusIcon } from "@yamada-ui/lucide";
 import { Button, Flex, HStack, Heading } from "@yamada-ui/react";
@@ -34,7 +34,14 @@ const ArticlesPage = async ({ searchParams }: ArticlesPageProps) => {
         </HStack>
       </Flex>
 
-      <ArticleList data={articles} />
+      <ArticleList
+        data={{
+          results: articles.articles,
+          count: articles.total,
+          next: articles.hasNext ? `/articles?page=${page + 1}` : null,
+          previous: articles.hasPrev ? `/articles?page=${page - 1}` : null,
+        }}
+      />
     </Flex>
   );
 };

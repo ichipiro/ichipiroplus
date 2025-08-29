@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteArticle, getArticlesByUser } from "@/features/article/api";
+import { deleteArticle, getMyArticles } from "@/features/article/actions";
 import type { Article } from "@/features/article/types";
 import { FilePenIcon, Trash2Icon } from "@yamada-ui/lucide";
 import {
@@ -39,8 +39,8 @@ const MyArticlesClient = ({
   profileId,
 }: MyArticlesClientProps) => {
   const { data: articles = initialArticles, mutate } = useSWR<Article[]>(
-    ["my-articles", profileId],
-    () => getArticlesByUser(profileId).then(res => res.results),
+    ["my-articles"],
+    () => getMyArticles(),
     {
       fallbackData: initialArticles,
     },
@@ -56,7 +56,7 @@ const MyArticlesClient = ({
   const confirmDelete = async () => {
     if (!selectedArticle) return;
     try {
-      await deleteArticle(selectedArticle);
+      await deleteArticle(selectedArticle.id);
       await mutate(
         articles.filter(article => article.id !== selectedArticle.id),
       );
@@ -84,7 +84,7 @@ const MyArticlesClient = ({
             {articles.map(article => (
               <Tr key={article.id}>
                 <Td>
-                  <Link href={`/${profileId}/articles/${article.slug}`}>
+                  <Link href={`/${profileId}/articles/${article.id}`}>
                     <Heading size="md" className="hover:underline">
                       {article.title}
                     </Heading>
@@ -92,18 +92,18 @@ const MyArticlesClient = ({
                 </Td>
 
                 <Td>
-                  {format(new Date(article.updated_at), "yyyy/MM/dd", {
+                  {format(new Date(article.updatedAt), "yyyy/MM/dd", {
                     locale: ja,
                   })}
                 </Td>
                 <Td>
-                  <Text color={article.is_public ? "green.500" : "red.500"}>
-                    {article.is_public ? "公開" : "非公開"}
+                  <Text color={article.isPublished ? "green.500" : "red.500"}>
+                    {article.isPublished ? "公開" : "非公開"}
                   </Text>
                 </Td>
                 <Td>
                   <HStack>
-                    <Link href={`/${profileId}/articles/${article.slug}/edit`}>
+                    <Link href={`/${profileId}/articles/${article.id}/edit`}>
                       <IconButton
                         icon={<FilePenIcon className="w-5 h-5" />}
                         variant="ghost"

@@ -1,15 +1,19 @@
-import { getArticlesByUser } from "@/features/article/api";
-import { getAuthUser } from "@/lib/auth-utils";
+import { getMyArticles } from "@/features/article/actions";
+import { getCurrentUser } from "@/features/user/actions";
+import { redirect } from "next/navigation";
 import MyArticlesClient from "./_components/MyArticlesClient";
 
 const MyArticlesPage = async () => {
-  const { user } = await getAuthUser();
+  const userProfile = await getCurrentUser();
 
-  const response = await getArticlesByUser(user.profile.profile_id);
-  const articles = response.results;
+  if (!userProfile) {
+    redirect("/auth/register");
+  }
+
+  const articles = await getMyArticles();
 
   return (
-    <MyArticlesClient articles={articles} profileId={user.profile.profile_id} />
+    <MyArticlesClient articles={articles} profileId={userProfile.username} />
   );
 };
 

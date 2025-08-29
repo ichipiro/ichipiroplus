@@ -1,16 +1,24 @@
-import { getAllDepartments, getAllFaculties } from "@/features/user/api";
+import {
+  getAllDepartments,
+  getAllFaculties,
+  getCurrentUser,
+} from "@/features/user/actions";
 import AccountSettings from "@/features/user/components/AccountSettings";
 import DisplaySettings from "@/features/user/components/DisplaySettings";
 import MyProfileEditForm from "@/features/user/components/MyProfileEditForm";
 import NotificationSettings from "@/features/webpush/components/NotificationSettings";
-import { getAuthUser } from "@/lib/auth-utils";
+import { redirect } from "next/navigation";
 
 interface SettingsPageProps {
   searchParams: { tab?: string };
 }
 
 const SettingsPage = async ({ searchParams }: SettingsPageProps) => {
-  const { user } = await getAuthUser();
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/auth/register");
+  }
 
   const departments = await getAllDepartments();
   const faculties = await getAllFaculties();
@@ -23,7 +31,7 @@ const SettingsPage = async ({ searchParams }: SettingsPageProps) => {
         <MyProfileEditForm
           departments={departments}
           faculties={faculties}
-          userProfile={user.profile}
+          user={user}
         />
       )}
       {tab === "account" && <AccountSettings />}

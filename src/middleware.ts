@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "./lib/auth";
 
-export default auth(async req => {
+export default auth(async (req) => {
   const { nextUrl, auth: session } = req;
   const isApiRoute = nextUrl.pathname.startsWith("/api");
   const isAuthRoute = nextUrl.pathname.startsWith("/auth");
@@ -10,7 +10,7 @@ export default auth(async req => {
 
   const isAuthenticated = !!session?.user;
   const isProfileComplete = isAuthenticated
-    ? !!session.user?.profile?.is_profile_complete
+    ? !!session.user?.isProfileComplete
     : false;
 
   const callbackUrl = nextUrl.pathname + nextUrl.search;

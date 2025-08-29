@@ -15,7 +15,7 @@ import {
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { deleteAccount } from "../api";
+import { deleteAccount } from "../actions";
 
 const AccountSettings = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();

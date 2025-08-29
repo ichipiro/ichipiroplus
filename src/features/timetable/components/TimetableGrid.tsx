@@ -1,12 +1,14 @@
-import type { Registration } from "@/features/timetable/types";
+import type {
+  RegistrationWithRelations,
+  Term,
+} from "@/features/timetable/types";
 import { Grid, GridItem, Text, VStack } from "@yamada-ui/react";
 import Link from "next/link";
 import React from "react";
 
 interface TimeTableGridProps {
-  registrationsMap: Map<number, Registration>;
-  year: number;
-  term: number;
+  registrationsMap: Map<number, RegistrationWithRelations>;
+  term: Term;
 }
 
 const DAYS = [1, 2, 3, 4, 5];
@@ -20,11 +22,7 @@ const TIMES_VALUE = [
   "16:20~17:50",
 ];
 
-const TimeTableGrid = ({
-  registrationsMap,
-  year,
-  term,
-}: TimeTableGridProps) => {
+const TimeTableGrid = ({ registrationsMap, term }: TimeTableGridProps) => {
   return (
     <Grid
       templateColumns={{
@@ -50,13 +48,10 @@ const TimeTableGrid = ({
         <React.Fragment key={time}>
           {DAYS.map(day => {
             const key = (day - 1) * MAX_TIME + time;
-            const lecture = registrationsMap.get(key)?.lecture;
+            const registration = registrationsMap.get(key);
+            const lecture = registration?.lecture;
             return (
-              <Link
-                key={key}
-                href={`/timetable/${year}/${term}/${key}`}
-                passHref
-              >
+              <Link key={key} href={`/timetable/${term.id}/${key}`} passHref>
                 <GridItem
                   key={key}
                   bg={["white", "black"]}

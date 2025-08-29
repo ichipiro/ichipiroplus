@@ -1,7 +1,10 @@
 import MyProfileEditForm from "@/features/user/components/MyProfileEditForm";
-import type { Department, Faculty } from "@/features/user/types";
+import type {
+  Department,
+  Faculty,
+  UserWithRelations,
+} from "@/features/user/types";
 import { Card, CardBody, CardHeader, Heading } from "@yamada-ui/react";
-import type { User } from "next-auth";
 import { useRouter } from "next/navigation";
 
 interface StepProfileProps {
@@ -9,11 +12,39 @@ interface StepProfileProps {
   onStepPrev: () => void;
   departments: Department[];
   faculties: Faculty[];
-  user: User;
+  user: UserWithRelations | null;
+  userId: string;
 }
 
-const StepProfile = ({ departments, faculties, user }: StepProfileProps) => {
+const StepProfile = ({
+  departments,
+  faculties,
+  user,
+  userId,
+}: StepProfileProps) => {
   const router = useRouter();
+
+  // 初回登録時は空のユーザーオブジェクトを作成
+  const currentUser: UserWithRelations = user ?? {
+    id: userId,
+    email: null,
+    emailVerified: null,
+    name: null,
+    image: null,
+    username: "",
+    displayName: "",
+    introduction: null,
+    grade: null,
+    facultyId: null,
+    departmentId: null,
+    isProfileComplete: false,
+    isAdmin: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    faculty: null,
+    department: null,
+  };
+
   return (
     <Card
       variant="outline"
@@ -29,8 +60,11 @@ const StepProfile = ({ departments, faculties, user }: StepProfileProps) => {
         <MyProfileEditForm
           departments={departments}
           faculties={faculties}
-          userProfile={user.profile}
-          onSuccess={() => router.refresh()}
+          user={currentUser}
+          onSuccess={() => {
+            router.push("/dashboard");
+            router.refresh();
+          }}
           isFirst
         />
       </CardBody>

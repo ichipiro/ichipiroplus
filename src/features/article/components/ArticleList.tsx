@@ -1,6 +1,7 @@
-import type { PaginatedResponse } from "@/types/api";
+import { getUsers } from "@/features/user/actions";
+import type { UserWithRelations } from "@/features/user/types";
 import { Box, Grid, GridItem, Heading, Text, VStack } from "@yamada-ui/react";
-import type { Article } from "../types";
+import type { Article, PaginatedResponse } from "../types";
 import ArticleCard from "./ArticleCard";
 import ArticlePagination from "./ArticlePagination";
 
@@ -10,7 +11,7 @@ interface ArticlesListProps {
   emptyMessage?: string;
 }
 
-const ArticlesList = ({
+const ArticlesList = async ({
   data,
   title = "",
   emptyMessage = "記事がありません",
@@ -18,6 +19,12 @@ const ArticlesList = ({
   const { results: articles, count, previous } = data;
   const currentPage = previous ? Math.ceil(count / 10) : 1;
   const totalPages = Math.ceil(count / 10);
+
+  // ユーザーIDを抽出して一括取得
+  const userIds = Array.from(
+    new Set(articles.map((article) => article.userId))
+  );
+  const usersMap: Map<string, UserWithRelations> = await getUsers(userIds);
 
   return (
     <VStack as="section" py={8} w="full" gap={8}>
@@ -37,11 +44,16 @@ const ArticlesList = ({
             gap="md"
             w="full"
           >
-            {articles.map(article => (
-              <GridItem key={article.slug}>
-                <ArticleCard article={article} />
-              </GridItem>
-            ))}
+            {articles.map((article) => {
+              const user = usersMap.get(article.userId);
+              return (
+                user && (
+                  <GridItem key={article.id}>
+                    <ArticleCard article={article} user={user} />
+                  </GridItem>
+                )
+              );
+            })}
           </Grid>
 
           {totalPages > 1 && (

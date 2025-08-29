@@ -1,4 +1,5 @@
-import { uploadImage } from "@/features/article/api";
+import { uploadImage } from "@/features/article/actions";
+import useActionFeedback from "@/hooks/useActionFeedback";
 import { XIcon } from "@yamada-ui/lucide";
 import {
   Avatar,
@@ -7,14 +8,14 @@ import {
   FormControl,
   IconButton,
   Input,
-  Text,
+  Skeleton,
 } from "@yamada-ui/react";
-import { useState } from "react";
+import { useTransition } from "react";
 import { type Control, useController } from "react-hook-form";
-import type { ProfileFormData } from "../types";
+import type { UserFormData } from "../types";
 
 interface IconUploadFieldProps {
-  control: Control<ProfileFormData>;
+  control: Control<UserFormData>;
   errorMessage?: string;
   label?: string;
   username: string;
@@ -27,39 +28,57 @@ const IconUploadField = ({
   defaultValue,
   errorMessage,
 }: IconUploadFieldProps) => {
-  const [isUploading, setIsUploading] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const { withFeedback } = useActionFeedback();
 
   const {
     field: { onChange, value },
     fieldState: { error },
   } = useController({
-    name: "picture",
+    name: "image",
     control,
     defaultValue: defaultValue || null,
   });
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // ファイルタイプのバリデーション
     if (!file.type.startsWith("image/")) {
+      const { showError } = useActionFeedback();
+      showError(new Error("画像ファイルを選択してください"));
       return;
     }
 
     // アップロード処理
-    try {
-      setIsUploading(true);
-      const formData = new FormData();
-      formData.append("file", file);
+    startTransition(async () => {
+      // FileをBase64に変換
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>(resolve => {
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+      });
+      reader.readAsDataURL(file);
+      const base64 = await base64Promise;
 
-      const result = await uploadImage(formData);
-      onChange(result.url);
-    } catch (error) {
-      console.error("Upload error:", error);
-    } finally {
-      setIsUploading(false);
-    }
+      const result = await withFeedback(
+        uploadImage({
+          base64,
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+        }),
+        {
+          successMessage: "アイコンをアップロードしました",
+        },
+      );
+
+      if (result) {
+        onChange(result);
+      }
+    });
   };
 
   const handleRemoveImage = () => {
@@ -92,6 +111,7 @@ const IconUploadField = ({
               top="0"
               left="0"
               cursor="pointer"
+              disabled={isPending}
             />
           </Avatar>
         </Center>
@@ -112,9 +132,9 @@ const IconUploadField = ({
         )}
       </Box>
 
-      {isUploading && (
+      {isPending && (
         <Center py={4}>
-          <Text>アップロード中...</Text>
+          <Skeleton h="20px" w="100px" />
         </Center>
       )}
     </FormControl>

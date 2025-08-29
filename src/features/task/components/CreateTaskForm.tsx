@@ -1,11 +1,14 @@
 "use client";
 
 import {
-  type Task,
   type TaskFormData,
+  TaskPriority,
+  type TaskPriorityType,
+  TaskStatus,
   taskFormSchema,
 } from "@/features/task/types";
-import type { Registration } from "@/features/timetable/types";
+import type { RegistrationWithRelations } from "@/features/timetable/types";
+import useActionFeedback from "@/hooks/useActionFeedback";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@yamada-ui/calendar";
 import {
@@ -21,15 +24,14 @@ import {
   Textarea,
   VStack,
 } from "@yamada-ui/react";
+import { useTaskStore } from "../store/useTaskStore";
 import "dayjs/locale/ja";
-import { useState } from "react";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
-import { useTaskContext } from "../context/TaskContext";
 
 interface CreateTaskFormProps {
-  onSuccess?: (newTask: Task) => void;
-  registrations?: Registration[];
-  defaultRegistrationId?: string; // デフォルトの講義ID
+  onSuccess?: () => void;
+  registrations?: RegistrationWithRelations[];
+  defaultRegistrationId?: string;
 }
 
 const CreateTaskForm = ({
@@ -37,8 +39,8 @@ const CreateTaskForm = ({
   registrations,
   defaultRegistrationId,
 }: CreateTaskFormProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addTask } = useTaskContext();
+  const { createTask, isPending } = useTaskStore();
+  const { withFeedback } = useActionFeedback();
 
   const {
     register,
@@ -51,9 +53,9 @@ const CreateTaskForm = ({
     defaultValues: {
       title: "",
       description: "",
-      registration_id: defaultRegistrationId,
-      priority: 1,
-      status: 0,
+      registrationId: defaultRegistrationId,
+      priority: TaskPriority.LOW,
+      status: TaskStatus.TODO,
     },
   });
 
@@ -65,19 +67,25 @@ const CreateTaskForm = ({
   );
 
   const handleFormSubmit: SubmitHandler<TaskFormData> = async data => {
-    setIsSubmitting(true);
-    try {
-      // defaultLectureIdが設定されていて、lecture_idが未設定の場合はdefaultLectureIdを使用
-      if (defaultRegistrationId && !data.registration_id) {
-        data.registration_id = defaultRegistrationId;
-      }
+    const registrationId = data.registrationId || defaultRegistrationId;
 
-      const newTask = await addTask(data);
+    const result = await withFeedback(
+      createTask({
+        title: data.title,
+        description: data.description,
+        priority: data.priority as TaskPriorityType,
+        dueDate: data.dueDate || undefined,
+        registrationId: registrationId || undefined,
+      }),
+      {
+        successMessage: "新しいタスクを作成しました",
+        successTitle: "タスク作成",
+      },
+    );
 
+    if (result) {
       reset();
-      onSuccess?.(newTask);
-    } finally {
-      setIsSubmitting(false);
+      onSuccess?.();
     }
   };
 
@@ -92,7 +100,6 @@ const CreateTaskForm = ({
       shadow="sm"
     >
       <VStack>
-        {/* タイトル */}
         <FormControl
           label="タイトル"
           invalid={!!errors.title}
@@ -106,11 +113,10 @@ const CreateTaskForm = ({
           <Input placeholder="タスクのタイトル" {...register("title")} />
         </FormControl>
 
-        {/* 講義（オプション） */}
         {lectureItems && (
           <FormControl label="講義" invalid={!!errors.title}>
             <Controller
-              name="registration_id"
+              name="registrationId"
               control={control}
               render={({ field }) => (
                 <Select
@@ -125,8 +131,6 @@ const CreateTaskForm = ({
           </FormControl>
         )}
 
-        {/* 詳細 */}
-
         <FormControl label="詳細">
           <Textarea
             placeholder="タスクの詳細を入力してください"
@@ -135,11 +139,9 @@ const CreateTaskForm = ({
           />
         </FormControl>
 
-        {/* 期限 */}
-
-        <FormControl label="期限" isInvalid={!!errors.due_date}>
+        <FormControl label="期限" invalid={!!errors.dueDate}>
           <Controller
-            name="due_date"
+            name="dueDate"
             control={control}
             render={({ field }) => (
               <DatePicker
@@ -152,9 +154,7 @@ const CreateTaskForm = ({
           />
         </FormControl>
 
-        {/* 優先度 */}
-
-        <FormControl label="優先度" isInvalid={!!errors.priority}>
+        <FormControl label="優先度" invalid={!!errors.priority}>
           <Controller
             name="priority"
             control={control}
@@ -165,9 +165,9 @@ const CreateTaskForm = ({
                 value={String(field.value)}
                 onChange={value => field.onChange(Number(value))}
               >
-                <Radio value="0">低</Radio>
-                <Radio value="1">中</Radio>
-                <Radio value="2">高</Radio>
+                <Radio value={String(TaskPriority.LOW)}>低</Radio>
+                <Radio value={String(TaskPriority.MEDIUM)}>中</Radio>
+                <Radio value={String(TaskPriority.HIGH)}>高</Radio>
               </RadioGroup>
             )}
           />
@@ -177,7 +177,7 @@ const CreateTaskForm = ({
           type="submit"
           colorScheme="blue"
           alignSelf="flex-end"
-          isLoading={isSubmitting}
+          loading={isPending}
         >
           タスクを作成
         </Button>

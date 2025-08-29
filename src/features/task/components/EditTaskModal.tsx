@@ -1,14 +1,16 @@
 "use client";
 
 import {
-  type Task,
   type TaskFormData,
+  TaskPriority,
+  type TaskPriorityType,
+  TaskStatus,
+  type TaskStatusType,
+  type TaskWithRelations,
   taskFormSchema,
 } from "@/features/task/types";
-import type { Registration } from "@/features/timetable/types";
-import { useTaskContext } from "../context/TaskContext";
-
-import { ApiError } from "@/lib/api/client";
+import type { RegistrationWithRelations } from "@/features/timetable/types";
+import useActionFeedback from "@/hooks/useActionFeedback";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@yamada-ui/calendar";
 import {
@@ -26,17 +28,17 @@ import {
   type SelectItem,
   Textarea,
   VStack,
-  useNotice,
 } from "@yamada-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
+import { useTaskStore } from "../store/useTaskStore";
 
 interface EditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (updateTask: Task) => void;
-  task: Task | null;
-  registrations?: Registration[];
+  onSuccess?: () => void;
+  task: TaskWithRelations | null;
+  registrations?: RegistrationWithRelations[];
 }
 
 const EditTaskModal = ({
@@ -46,9 +48,8 @@ const EditTaskModal = ({
   task,
   registrations,
 }: EditTaskModalProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const notice = useNotice();
-  const { editTask } = useTaskContext();
+  const { updateTask, isPending } = useTaskStore();
+  const { withFeedback } = useActionFeedback();
 
   const {
     register,
@@ -61,24 +62,21 @@ const EditTaskModal = ({
     defaultValues: {
       title: "",
       description: "",
-      registration_id: null,
-      priority: 1,
-      status: 0,
+      registrationId: null,
+      priority: TaskPriority.LOW,
+      status: TaskStatus.TODO,
     },
   });
 
-  // タスクが変更されたときにフォーム値をリセット
   useEffect(() => {
     if (task) {
       reset({
         title: task.title,
         description: task.description || "",
-        registration_id: task.registration
-          ? String(task.registration.id)
-          : null,
+        registrationId: task.registrationId || null,
         priority: task.priority,
         status: task.status,
-        due_date: task.due_date ? new Date(task.due_date) : null,
+        dueDate: task.dueDate ? new Date(task.dueDate) : null,
       });
     }
   }, [task, reset]);
@@ -90,60 +88,46 @@ const EditTaskModal = ({
     }),
   );
 
-  const onSubmit: SubmitHandler<TaskFormData> = async (data: TaskFormData) => {
-    if (!task) {
-      return;
-    }
-    setIsSubmitting(true);
+  const onSubmit: SubmitHandler<TaskFormData> = async data => {
+    if (!task) return;
 
-    try {
-      const updatedTask = await editTask(task.id, data);
+    const result = await withFeedback(
+      updateTask(task.id, {
+        title: data.title,
+        description: data.description,
+        priority: data.priority as TaskPriorityType,
+        status: data.status as TaskStatusType,
+        dueDate: data.dueDate || undefined,
+        registrationId: data.registrationId || undefined,
+      }),
+      {
+        successMessage: "タスクを更新しました",
+        successTitle: "タスク更新",
+      },
+    );
 
-      notice({
-        title: "タスク更新",
-        description: "タスクを更新しました",
-        status: "success",
-      });
-      onSuccess?.(updatedTask);
+    if (result) {
+      onSuccess?.();
       onClose();
-    } catch (error) {
-      if (error instanceof ApiError) {
-        notice({
-          title: "エラー",
-          description: error.message,
-          status: "error",
-        });
-      } else {
-        notice({
-          title: "エラー",
-          description: "不明なエラーが発生しました",
-          status: "error",
-        });
-      }
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal open={isOpen} onClose={onClose}>
       <ModalBody>
         <VStack as="form" onSubmit={handleSubmit(onSubmit)}>
           <ModalHeader>タスクを編集</ModalHeader>
           <ModalCloseButton />
 
           <VStack>
-            {/* タイトル */}
-
-            <FormControl isInvalid={!!errors.title} isRequired>
+            <FormControl invalid={!!errors.title} required>
               <Input placeholder="タスクのタイトル" {...register("title")} />
             </FormControl>
 
-            {/* 講義（オプション） */}
             {lectureItems && (
               <FormControl>
                 <Controller
-                  name="registration_id"
+                  name="registrationId"
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -158,8 +142,6 @@ const EditTaskModal = ({
               </FormControl>
             )}
 
-            {/* 詳細 */}
-
             <FormControl>
               <Textarea
                 placeholder="タスクの詳細を入力してください"
@@ -168,11 +150,9 @@ const EditTaskModal = ({
               />
             </FormControl>
 
-            {/* 期限 */}
-
-            <FormControl isInvalid={!!errors.due_date}>
+            <FormControl invalid={!!errors.dueDate}>
               <Controller
-                name="due_date"
+                name="dueDate"
                 control={control}
                 render={({ field }) => (
                   <DatePicker
@@ -185,9 +165,7 @@ const EditTaskModal = ({
               />
             </FormControl>
 
-            {/* 優先度 */}
-
-            <FormControl isInvalid={!!errors.priority}>
+            <FormControl invalid={!!errors.priority}>
               <Controller
                 name="priority"
                 control={control}
@@ -197,17 +175,15 @@ const EditTaskModal = ({
                     value={String(field.value)}
                     onChange={value => field.onChange(Number(value))}
                   >
-                    <Radio value="0">低</Radio>
-                    <Radio value="1">中</Radio>
-                    <Radio value="2">高</Radio>
+                    <Radio value={String(TaskPriority.LOW)}>低</Radio>
+                    <Radio value={String(TaskPriority.MEDIUM)}>中</Radio>
+                    <Radio value={String(TaskPriority.HIGH)}>高</Radio>
                   </RadioGroup>
                 )}
               />
             </FormControl>
 
-            {/* 状態 */}
-
-            <FormControl isInvalid={!!errors.status}>
+            <FormControl invalid={!!errors.status}>
               <Controller
                 name="status"
                 control={control}
@@ -217,9 +193,9 @@ const EditTaskModal = ({
                     value={String(field.value)}
                     onChange={value => field.onChange(Number(value))}
                   >
-                    <Radio value="0">未着手</Radio>
-                    <Radio value="1">進行中</Radio>
-                    <Radio value="2">完了</Radio>
+                    <Radio value={String(TaskStatus.TODO)}>未着手</Radio>
+                    <Radio value={String(TaskStatus.IN_PROGRESS)}>進行中</Radio>
+                    <Radio value={String(TaskStatus.DONE)}>完了</Radio>
                   </RadioGroup>
                 )}
               />
@@ -230,7 +206,7 @@ const EditTaskModal = ({
             <Button variant="outline" mr={3} onClick={onClose}>
               キャンセル
             </Button>
-            <Button type="submit" colorScheme="blue" isLoading={isSubmitting}>
+            <Button type="submit" colorScheme="blue" loading={isPending}>
               保存
             </Button>
           </ModalFooter>

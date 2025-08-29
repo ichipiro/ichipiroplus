@@ -1,8 +1,7 @@
 // RegistrationSteps.tsx
 "use client";
 
-import type { Department, Faculty } from "@/features/user/types";
-import type { User } from "next-auth";
+import type { Department, Faculty, UserWithRelations } from "@/features/user/types";
 import RegistrationStepper from "../RegistrationStepper";
 import StepIntro from "../StepIntro";
 import StepProfile from "../StepProfile";
@@ -10,13 +9,15 @@ import StepProfile from "../StepProfile";
 interface RegistrationStepsProps {
   departments: Department[];
   faculties: Faculty[];
-  user: User;
+  user: UserWithRelations | null;
+  userId: string;
 }
 
 const RegistrationSteps = ({
   departments,
   faculties,
   user,
+  userId,
 }: RegistrationStepsProps) => {
   return (
     <RegistrationStepper
@@ -27,6 +28,7 @@ const RegistrationSteps = ({
           departments={departments}
           faculties={faculties}
           user={user}
+          userId={userId}
           onStepNext={onStepNext}
           onStepPrev={onStepPrev}
         />,

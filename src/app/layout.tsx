@@ -3,15 +3,15 @@ import "@/features/editor/styles/tiptap.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Center, VStack } from "@yamada-ui/react";
 import type { Metadata, Viewport } from "next";
-import { Zen_Kaku_Gothic_New } from "next/font/google";
+import { Noto_Sans_JP } from "next/font/google";
 import type { ReactNode } from "react";
 import Footer from "../components/Footer";
 import YamadaUIProvider from "../components/YamadaUIProvider";
 import "./globals.css";
 
-const ZenKakuGothicNewFont = Zen_Kaku_Gothic_New({
+const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
-  weight: "500",
+  weight: ["400", "500", "700"],
   display: "swap",
   preload: false,
 });
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 const RootLayout = ({ children }: { children: ReactNode }) => {
   return (
     <html lang="ja">
-      <body className={ZenKakuGothicNewFont.className}>
+      <body className={notoSansJP.className}>
         <YamadaUIProvider>
           <Center>
             <VStack maxW="9xl" fontSize={{ base: "md", md: "sm" }}>
