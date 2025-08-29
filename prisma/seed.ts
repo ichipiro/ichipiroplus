@@ -84,16 +84,18 @@ async function main() {
 function getDepartmentsByFaculty(facultyName: string): string[] {
   switch (facultyName) {
     case "国際学部":
-      return ["国際学科"];
+      return ["国際学科", "国際学研究科"];
     case "情報科学部":
-      return ["情報工学科", "知能工学科", "システム工学科", "医用情報科学科"];
-    case "芸術学部":
       return [
-        "美術学科日本画専攻",
-        "美術学科油絵専攻",
-        "美術学科彫刻専攻",
-        "デザイン工芸学科",
+        "未配属",
+        "情報工学科",
+        "知能工学科",
+        "システム工学科",
+        "医用情報科学科",
+        "情報科学研究科",
       ];
+    case "芸術学部":
+      return ["美術学科", "芸術学研究科", "デザイン工芸学科"];
     default:
       return [];
   }
