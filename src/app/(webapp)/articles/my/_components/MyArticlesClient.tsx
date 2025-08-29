@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteArticle, getMyArticles } from "@/features/article/actions";
+import { deleteArticle } from "@/features/article/actions";
 import type { Article } from "@/features/article/types";
 import { FilePenIcon, Trash2Icon } from "@yamada-ui/lucide";
 import {
@@ -26,8 +26,7 @@ import {
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import Link from "next/link";
-import { useState } from "react";
-import useSWR from "swr";
+import { useOptimistic, useState, useTransition } from "react";
 
 interface MyArticlesClientProps {
   articles: Article[];
@@ -38,13 +37,12 @@ const MyArticlesClient = ({
   articles: initialArticles,
   profileId,
 }: MyArticlesClientProps) => {
-  const { data: articles = initialArticles, mutate } = useSWR<Article[]>(
-    ["my-articles"],
-    () => getMyArticles(),
-    {
-      fallbackData: initialArticles,
-    },
+  const [optimisticArticles, setOptimisticArticles] = useOptimistic(
+    initialArticles,
+    (state: Article[], deleteId: string) =>
+      state.filter((article) => article.id !== deleteId)
   );
+  const [isPending, startTransition] = useTransition();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
@@ -55,22 +53,27 @@ const MyArticlesClient = ({
 
   const confirmDelete = async () => {
     if (!selectedArticle) return;
-    try {
-      await deleteArticle(selectedArticle.id);
-      await mutate(
-        articles.filter(article => article.id !== selectedArticle.id),
-      );
-      onClose();
-    } catch (error) {
-      console.error("記事の削除に失敗しました", error);
-    }
+
+    startTransition(async () => {
+      // 楽観的更新
+      setOptimisticArticles(selectedArticle.id);
+
+      try {
+        await deleteArticle(selectedArticle.id);
+      } catch (error) {
+        console.error("記事の削除に失敗しました", error);
+        // エラー時は親コンポーネントのリフレッシュで元に戻る
+      }
+    });
+
+    onClose();
   };
 
   return (
     <VStack>
       <Heading size="lg">マイ記事</Heading>
 
-      <TableContainer w="full">
+      <TableContainer w="full" opacity={isPending ? 0.7 : 1}>
         <NativeTable withColumnBorders withBorder>
           <Thead>
             <Tr>
@@ -81,7 +84,7 @@ const MyArticlesClient = ({
             </Tr>
           </Thead>
           <Tbody>
-            {articles.map(article => (
+            {optimisticArticles.map((article) => (
               <Tr key={article.id}>
                 <Td>
                   <Link href={`/${profileId}/articles/${article.id}`}>
@@ -108,6 +111,7 @@ const MyArticlesClient = ({
                         icon={<FilePenIcon className="w-5 h-5" />}
                         variant="ghost"
                         colorScheme="primary"
+                        disabled={isPending}
                       />
                     </Link>
 
@@ -116,6 +120,7 @@ const MyArticlesClient = ({
                       onClick={() => handleDelete(article)}
                       variant="ghost"
                       colorScheme="danger"
+                      disabled={isPending}
                     />
                   </HStack>
                 </Td>
