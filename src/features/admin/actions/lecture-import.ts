@@ -10,39 +10,16 @@ import {
 } from "../types";
 
 /**
- * 管理者権限のチェック
- */
-const checkAdminAuth = async (): Promise<boolean> => {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("認証が必要です");
-  }
-
-  const userProfile = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { isAdmin: true },
-  });
-
-  if (!userProfile?.isAdmin) {
-    throw new Error("管理者権限が必要です");
-  }
-
-  return true;
-};
-
-/**
  * JSONデータをバリデーション
  */
 export const validateLectureData = async (
-  jsonString: string,
+  jsonString: string
 ): Promise<{
   valid: boolean;
   data?: LectureImportData[];
   errors?: string[];
 }> => {
   try {
-    await checkAdminAuth();
-
     const jsonData = JSON.parse(jsonString);
 
     if (!Array.isArray(jsonData)) {
@@ -59,7 +36,7 @@ export const validateLectureData = async (
       } catch (error) {
         if (error instanceof z.ZodError) {
           errors.push(
-            `行 ${i + 1}: ${error.errors.map(e => e.message).join(", ")}`,
+            `行 ${i + 1}: ${error.errors.map((e) => e.message).join(", ")}`
           );
         }
       }
@@ -84,11 +61,9 @@ export const validateLectureData = async (
  * シラバスデータをインポート
  */
 export const importLectureData = async (
-  jsonString: string,
+  jsonString: string
 ): Promise<ImportResult> => {
   try {
-    await checkAdminAuth();
-
     // セッション情報を事前に取得
     const session = await auth();
     if (!session?.user?.id) {
@@ -115,12 +90,12 @@ export const importLectureData = async (
     const errors: string[] = [];
 
     // トランザクションで一括処理
-    await prisma.$transaction(async tx => {
+    await prisma.$transaction(async (tx) => {
       for (const item of data) {
         try {
           console.log(`Processing lecture: ${item.id} - ${item.name}`);
           // スケジュールIDを計算（正しい計算式に修正）
-          const scheduleIds = item.schedules.map(sch => {
+          const scheduleIds = item.schedules.map((sch) => {
             // day: 1-5, time: 1-7
             // IDは1から始まる連番
             const id = (sch.day - 1) * 5 + sch.time;
@@ -135,7 +110,7 @@ export const importLectureData = async (
           console.log(
             `Found ${
               departments.length
-            } departments for ${item.departments.join(", ")}`,
+            } departments for ${item.departments.join(", ")}`
           );
 
           // 講義データの作成
@@ -158,10 +133,10 @@ export const importLectureData = async (
             sourceType: "scraped",
             termNumbers: item.terms, // 概念的ターム番号配列に直接設定
             schedules: {
-              connect: scheduleIds.map(id => ({ id })),
+              connect: scheduleIds.map((id) => ({ id })),
             },
             departments: {
-              connect: departments.map(d => ({ id: d.id })),
+              connect: departments.map((d) => ({ id: d.id })),
             },
           };
 
@@ -183,7 +158,7 @@ export const importLectureData = async (
           }
           lectureCount++;
           console.log(
-            `Successfully processed lecture ${lectureCount}/${data.length}`,
+            `Successfully processed lecture ${lectureCount}/${data.length}`
           );
         } catch (error) {
           const errorMsg = `ID: ${item.id} - ${
