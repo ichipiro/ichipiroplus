@@ -1,4 +1,4 @@
-# Ichipiroplus frontend
+# Ichipiroplus
 
 ## 開発環境のセットアップ
 
