@@ -70,6 +70,16 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
       return session;
     },
   },
+  events: {
+    async createUser({ user }) {
+      if (process.env.NODE_ENV !== "production") {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { isAdmin: true },
+        });
+      }
+    },
+  },
 });
 
 declare module "next-auth" {
