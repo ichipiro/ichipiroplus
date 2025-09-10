@@ -25,9 +25,9 @@ const TimeSlotPage = async ({ params, searchParams }: TimeSlotPageProps) => {
 
   const term = await getTerm(params.termId);
 
-  const registrations = await getRegistrationsBySchedule(dayTime, term.id);
-  if (registrations.length) {
-    return <LectureDetail registration={registrations[0]} />;
+  const registration = await getRegistrationsBySchedule(dayTime, term.id);
+  if (registration) {
+    return <LectureDetail registration={registration} />;
   }
 
   const lectures = await getLectures({

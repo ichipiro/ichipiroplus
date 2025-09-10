@@ -43,10 +43,10 @@ export const getMyRegistrations = async (
 export const getRegistrationsBySchedule = async (
   schedule: number,
   termId: string,
-): Promise<RegistrationWithRelations[]> => {
+): Promise<RegistrationWithRelations | null> => {
   const userId = await getMe();
 
-  return await prisma.registration.findMany({
+  return await prisma.registration.findFirst({
     where: {
       userId,
       termId,

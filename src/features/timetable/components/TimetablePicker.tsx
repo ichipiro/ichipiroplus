@@ -1,28 +1,23 @@
-"use client";
-
 import type { Term } from "@prisma/client";
 import { HStack, Option, Select } from "@yamada-ui/react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { getTerms } from "../actions";
 
 interface TimetablePickerProps {
-  allTerms: Term[];
   nowTerm: Term;
 }
 
-const TimetablePicker = ({ allTerms, nowTerm }: TimetablePickerProps) => {
-  const router = useRouter();
-
-  const handleTermChange = (value: string) => {
-    router.push(`/timetable/${value}`);
-  };
-
+const TimetablePicker = async ({ nowTerm }: TimetablePickerProps) => {
+  const allTerms = await getTerms();
   return (
     <HStack>
-      <Select value={String(nowTerm.id)} onChange={handleTermChange}>
+      <Select value={String(nowTerm.id)}>
         {allTerms.map(term => {
           return (
             <Option value={term.id} key={term.id}>
-              {term.name}
+              <Link href={`/timetable/${term.id}`} key={term.id}>
+                {term.name}
+              </Link>
             </Option>
           );
         })}
