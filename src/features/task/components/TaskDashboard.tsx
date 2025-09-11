@@ -1,9 +1,14 @@
 "use client";
 
-import type { RegistrationWithRelations } from "@/features/timetable/types";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import { PlusIcon } from "@yamada-ui/lucide";
-import { Box, Button, VStack, useDisclosure } from "@yamada-ui/react";
+import {
+  Box,
+  Button,
+  type SelectItem,
+  VStack,
+  useDisclosure,
+} from "@yamada-ui/react";
 import { useEffect } from "react";
 import { useTaskStore } from "../store/useTaskStore";
 import type { TaskWithRelations } from "../types";
@@ -15,14 +20,14 @@ import TaskColumn from "./TaskColumn";
 
 interface TasksDashboardProps {
   initialTasks: TaskWithRelations[];
-  registrations?: RegistrationWithRelations[];
-  registration_id?: string;
+  lectureItems?: SelectItem[];
+  registrationId?: string;
 }
 
 const TasksDashboard = ({
   initialTasks,
-  registrations,
-  registration_id,
+  lectureItems,
+  registrationId,
 }: TasksDashboardProps) => {
   const store = useTaskStore();
   const { open, onToggle } = useDisclosure();
@@ -48,8 +53,8 @@ const TasksDashboard = ({
 
         {open && (
           <CreateTaskForm
-            registrations={registrations}
-            defaultRegistrationId={registration_id}
+            lectureItems={lectureItems}
+            defaultRegistrationId={registrationId}
             onSuccess={() => onToggle()}
           />
         )}
@@ -81,7 +86,7 @@ const TasksDashboard = ({
         isOpen={store.modals.edit}
         onClose={() => store.closeModal("edit")}
         task={store.selectedTask}
-        registrations={registrations}
+        lectureItems={lectureItems}
         onSuccess={() => store.closeModal("edit")}
       />
 

@@ -7,7 +7,6 @@ import {
   TaskStatus,
   taskFormSchema,
 } from "@/features/task/types";
-import type { RegistrationWithRelations } from "@/features/timetable/types";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@yamada-ui/calendar";
@@ -24,19 +23,19 @@ import {
   Textarea,
   VStack,
 } from "@yamada-ui/react";
-import { useTaskStore } from "../store/useTaskStore";
 import "dayjs/locale/ja";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
+import { useTaskStore } from "../store/useTaskStore";
 
 interface CreateTaskFormProps {
   onSuccess?: () => void;
-  registrations?: RegistrationWithRelations[];
+  lectureItems?: SelectItem[];
   defaultRegistrationId?: string;
 }
 
 const CreateTaskForm = ({
   onSuccess,
-  registrations,
+  lectureItems,
   defaultRegistrationId,
 }: CreateTaskFormProps) => {
   const { createTask, isPending } = useTaskStore();
@@ -58,13 +57,6 @@ const CreateTaskForm = ({
       status: TaskStatus.TODO,
     },
   });
-
-  const lectureItems: SelectItem[] | undefined = registrations?.map(
-    registration => ({
-      label: registration.lecture.name,
-      value: String(registration.id),
-    }),
-  );
 
   const handleFormSubmit: SubmitHandler<TaskFormData> = async data => {
     const registrationId = data.registrationId || defaultRegistrationId;

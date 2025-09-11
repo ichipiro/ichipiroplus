@@ -45,7 +45,7 @@ const LectureDetail = async ({ tab, registration }: LectureDetailPageProps) => {
       {tab === "tasks" && (
         <TasksDashboard
           initialTasks={tasks}
-          registration_id={String(registration.id)}
+          registrationId={String(registration.id)}
         />
       )}
 

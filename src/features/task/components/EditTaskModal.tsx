@@ -9,7 +9,6 @@ import {
   type TaskWithRelations,
   taskFormSchema,
 } from "@/features/task/types";
-import type { RegistrationWithRelations } from "@/features/timetable/types";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@yamada-ui/calendar";
@@ -38,7 +37,7 @@ interface EditTaskModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   task: TaskWithRelations | null;
-  registrations?: RegistrationWithRelations[];
+  lectureItems?: SelectItem[];
 }
 
 const EditTaskModal = ({
@@ -46,7 +45,7 @@ const EditTaskModal = ({
   onClose,
   onSuccess,
   task,
-  registrations,
+  lectureItems,
 }: EditTaskModalProps) => {
   const { updateTask, isPending } = useTaskStore();
   const { withFeedback } = useActionFeedback();
@@ -80,13 +79,6 @@ const EditTaskModal = ({
       });
     }
   }, [task, reset]);
-
-  const lectureItems: SelectItem[] | undefined = registrations?.map(
-    registration => ({
-      label: registration.lecture.name,
-      value: String(registration.id),
-    }),
-  );
 
   const onSubmit: SubmitHandler<TaskFormData> = async data => {
     if (!task) return;
