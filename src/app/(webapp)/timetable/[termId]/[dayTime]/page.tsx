@@ -11,7 +11,6 @@ interface TimeSlotPageProps {
     dayTime: string;
   };
 
-  // TODO: タブを状態管理からクエリパラメータでの管理にする
   searchParams: {
     tab?: string;
   };
@@ -19,15 +18,14 @@ interface TimeSlotPageProps {
 
 const TimeSlotPage = async ({ params, searchParams }: TimeSlotPageProps) => {
   const dayTime = Number.parseInt(params.dayTime);
-  // TODO: タブを状態管理からクエリパラメータでの管理にする
-  // const tab = searchParams.tab || "tasks";
+  const tab = searchParams.tab || "attendance";
   const { day, time } = getDayTimeByScheduleKey(dayTime);
 
   const term = await getTerm(params.termId);
 
   const registration = await getRegistrationsBySchedule(dayTime, term.id);
   if (registration) {
-    return <LectureDetail registration={registration} />;
+    return <LectureDetail tab={tab} registration={registration} />;
   }
 
   const lectures = await getLectures({

@@ -1,28 +1,6 @@
-import type { UserWithRelations } from "@/features/user/types";
-import type {
-  Department,
-  Lecture,
-  Registration,
-  Schedule,
-  Term,
-} from "@prisma/client";
+import type { Lecture, Registration, Term } from "@prisma/client";
 
 export type { Lecture, Registration, Term };
-
-export type LectureWithRelations = Lecture & {
-  registrations: Registration[];
-  schedules: Schedule[];
-  departments: Department[];
-};
-
-export type RegistrationWithRelations = Registration & {
-  lecture: Lecture & {
-    schedules: Schedule[];
-    departments: Department[];
-  };
-  term: Term;
-  user: UserWithRelations;
-};
 
 // Lecture form data
 export interface LectureFormData {

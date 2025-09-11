@@ -2,15 +2,14 @@
 
 import { getMe } from "@/features/user/actions";
 import { prisma } from "@/lib/prisma";
-
-import type { RegistrationWithRelations } from "../types";
+import type { Registration } from "@prisma/client";
 
 /**
  * ユーザーの登録済み講義を取得
  */
 export const getMyRegistrations = async (
   termId: string,
-): Promise<RegistrationWithRelations[]> => {
+): Promise<Registration[]> => {
   const userId = await getMe();
 
   return await prisma.registration.findMany({
@@ -19,21 +18,6 @@ export const getMyRegistrations = async (
       termId,
     },
     orderBy: { registeredAt: "desc" },
-    include: {
-      lecture: {
-        include: {
-          schedules: true,
-          departments: true,
-        },
-      },
-      term: true,
-      user: {
-        include: {
-          faculty: true,
-          department: true,
-        },
-      },
-    },
   });
 };
 
@@ -43,7 +27,7 @@ export const getMyRegistrations = async (
 export const getRegistrationsBySchedule = async (
   schedule: number,
   termId: string,
-): Promise<RegistrationWithRelations | null> => {
+): Promise<Registration | null> => {
   const userId = await getMe();
 
   return await prisma.registration.findFirst({
@@ -56,51 +40,19 @@ export const getRegistrationsBySchedule = async (
         },
       },
     },
-    include: {
-      lecture: {
-        include: {
-          schedules: true,
-          departments: true,
-        },
-      },
-      term: true,
-      user: {
-        include: {
-          faculty: true,
-          department: true,
-        },
-      },
-    },
   });
 };
 
 /**
  * 登録情報を取得
  */
-export const getRegistration = async (
-  id: string,
-): Promise<RegistrationWithRelations> => {
+export const getRegistration = async (id: string): Promise<Registration> => {
   const userId = await getMe();
 
   const data = await prisma.registration.findFirst({
     where: {
       id,
       userId,
-    },
-    include: {
-      lecture: {
-        include: {
-          schedules: true,
-          departments: true,
-        },
-      },
-      term: true,
-      user: {
-        include: {
-          faculty: true,
-          department: true,
-        },
-      },
     },
   });
 
@@ -117,7 +69,7 @@ export const getRegistration = async (
 export const registerForLecture = async (
   lectureId: string,
   termId: string,
-): Promise<RegistrationWithRelations> => {
+): Promise<Registration> => {
   const userId = await getMe();
 
   // 講義の情報を取得
@@ -150,21 +102,6 @@ export const registerForLecture = async (
       lectureId: lectureId,
       termId,
       attendanceCount: 0,
-    },
-    include: {
-      lecture: {
-        include: {
-          schedules: true,
-          departments: true,
-        },
-      },
-      term: true,
-      user: {
-        include: {
-          faculty: true,
-          department: true,
-        },
-      },
     },
   });
 

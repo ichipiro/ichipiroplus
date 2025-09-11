@@ -33,7 +33,7 @@ export const getScheduleKey = (day: number, time: number) => {
  * @returns day:日付の数値(月=1, 火=2, ...), time:時限の数値(1限=1, 2限=2, ...)
  */
 export const getDayTimeByScheduleKey = (scheduleKey: number) => {
-  const day = Math.floor(scheduleKey / 5) + 1;
-  const time = scheduleKey % 5;
+  const day = Math.floor(scheduleKey / MAX_TIME) + 1;
+  const time = scheduleKey % MAX_TIME;
   return { day, time };
 };
