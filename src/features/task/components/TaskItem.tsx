@@ -4,10 +4,10 @@ import {
   TaskPriority,
   TaskStatus,
   type TaskStatusType,
-  type TaskWithRelations,
 } from "@/features/task/types";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import { format } from "@formkit/tempo";
+import type { Task } from "@prisma/client";
 import {
   CircleCheckBigIcon,
   CircleIcon,
@@ -28,31 +28,42 @@ import {
   Tooltip,
   VStack,
 } from "@yamada-ui/react";
-import { useTaskStore } from "../store/useTaskStore";
+import type { ReactNode } from "react";
 
 interface TaskItemProps {
-  task: TaskWithRelations;
+  task: Task;
   showLecture?: boolean;
+  isPending: boolean;
+  onUpdateStatus: (taskId: string, status: TaskStatusType) => Promise<Task>;
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
+  registrationLabel?: ReactNode;
 }
 
-const TaskItem = ({ task, showLecture = true }: TaskItemProps) => {
-  const { updateTaskStatus, isPending, openEditModal, openDeleteDialog } =
-    useTaskStore();
+const TaskItem = ({
+  task,
+  showLecture = true,
+  isPending,
+  onUpdateStatus,
+  onEdit,
+  onDelete,
+  registrationLabel,
+}: TaskItemProps) => {
   const { withFeedback } = useActionFeedback();
 
   const handleToggleStatus = async () => {
     if (isPending) return;
     const newStatus =
       task.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE;
-    await withFeedback(updateTaskStatus(task.id, newStatus), {
+    await withFeedback(onUpdateStatus(task.id, newStatus), {
       successMessage: "タスクのステータスを更新しました",
       successTitle: "ステータス更新",
     });
   };
 
-  const handleUpdateToStatus = async (status: number) => {
+  const handleUpdateToStatus = async (status: TaskStatusType) => {
     if (isPending || task.status === status) return;
-    await withFeedback(updateTaskStatus(task.id, status as TaskStatusType), {
+    await withFeedback(onUpdateStatus(task.id, status), {
       successMessage: "タスクのステータスを更新しました",
       successTitle: "ステータス更新",
     });
@@ -111,8 +122,8 @@ const TaskItem = ({ task, showLecture = true }: TaskItemProps) => {
             >
               完了に移動
             </MenuItem>
-            <MenuItem onClick={() => openEditModal(task)}>編集</MenuItem>
-            <MenuItem onClick={() => openDeleteDialog(task)} color="red.500">
+            <MenuItem onClick={() => onEdit(task)}>編集</MenuItem>
+            <MenuItem onClick={() => onDelete(task)} color="red.500">
               削除
             </MenuItem>
           </MenuList>
@@ -147,13 +158,13 @@ const TaskItem = ({ task, showLecture = true }: TaskItemProps) => {
                 {task.title}
               </Text>
 
-              {showLecture && task.registration && (
+              {showLecture && task.registrationId && (
                 <Badge
                   colorScheme="purple"
                   variant="subtle"
                   alignSelf={{ base: "flex-start" }}
                 >
-                  {task.registration.lecture.name}
+                  {registrationLabel ?? "講義"}
                 </Badge>
               )}
             </Stack>
@@ -173,6 +184,7 @@ const TaskItem = ({ task, showLecture = true }: TaskItemProps) => {
               color="gray.500"
               direction={{ base: "column", md: "row" }}
               align={{ base: "flex-start", md: "center" }}
+              gap={1}
             >
               {formattedDueDate && <Text>期限: {formattedDueDate}</Text>}
               <Text>

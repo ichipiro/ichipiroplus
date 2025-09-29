@@ -25,20 +25,24 @@ import {
 } from "@yamada-ui/react";
 import "dayjs/locale/ja";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
-import { useTaskStore } from "../store/useTaskStore";
 
 interface CreateTaskFormProps {
   onSuccess?: () => void;
   lectureItems?: SelectItem[];
   defaultRegistrationId?: string;
+  onCreate: (
+    data: Omit<TaskFormData, "status">,
+  ) => Promise<unknown>;
+  isPending?: boolean;
 }
 
 const CreateTaskForm = ({
   onSuccess,
   lectureItems,
   defaultRegistrationId,
+  onCreate,
+  isPending = false,
 }: CreateTaskFormProps) => {
-  const { createTask, isPending } = useTaskStore();
   const { withFeedback } = useActionFeedback();
 
   const {
@@ -59,15 +63,18 @@ const CreateTaskForm = ({
   });
 
   const handleFormSubmit: SubmitHandler<TaskFormData> = async data => {
-    const registrationId = data.registrationId || defaultRegistrationId;
+    const registrationId =
+      data.registrationId === undefined
+        ? defaultRegistrationId
+        : data.registrationId ?? undefined;
 
     const result = await withFeedback(
-      createTask({
+      onCreate({
         title: data.title,
         description: data.description,
         priority: data.priority as TaskPriorityType,
         dueDate: data.dueDate || undefined,
-        registrationId: registrationId || undefined,
+        registrationId,
       }),
       {
         successMessage: "新しいタスクを作成しました",

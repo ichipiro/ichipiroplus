@@ -6,11 +6,11 @@ import {
   type TaskPriorityType,
   TaskStatus,
   type TaskStatusType,
-  type TaskWithRelations,
   taskFormSchema,
 } from "@/features/task/types";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { Task } from "@prisma/client";
 import { DatePicker } from "@yamada-ui/calendar";
 import {
   Button,
@@ -30,14 +30,18 @@ import {
 } from "@yamada-ui/react";
 import { useEffect } from "react";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
-import { useTaskStore } from "../store/useTaskStore";
 
 interface EditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  task: TaskWithRelations | null;
+  task: Task | null;
   lectureItems?: SelectItem[];
+  onUpdate: (
+    taskId: string,
+    data: Partial<TaskFormData>,
+  ) => Promise<unknown>;
+  isPending?: boolean;
 }
 
 const EditTaskModal = ({
@@ -46,8 +50,9 @@ const EditTaskModal = ({
   onSuccess,
   task,
   lectureItems,
+  onUpdate,
+  isPending = false,
 }: EditTaskModalProps) => {
-  const { updateTask, isPending } = useTaskStore();
   const { withFeedback } = useActionFeedback();
 
   const {
@@ -84,7 +89,7 @@ const EditTaskModal = ({
     if (!task) return;
 
     const result = await withFeedback(
-      updateTask(task.id, {
+      onUpdate(task.id, {
         title: data.title,
         description: data.description,
         priority: data.priority as TaskPriorityType,
