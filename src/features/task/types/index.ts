@@ -1,13 +1,4 @@
-import type { Lecture, Registration, Task } from "@prisma/client";
 import { z } from "zod";
-
-export type TaskWithRelations = Task & {
-  registration?:
-    | (Registration & {
-        lecture: Lecture;
-      })
-    | null;
-};
 
 export const TaskStatus = {
   TODO: 1,

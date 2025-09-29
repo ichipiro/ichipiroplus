@@ -1,5 +1,5 @@
 import DateFormat from "@/components/DateFormat";
-import type { UserWithRelations } from "@/features/user/types";
+import { getUser } from "@/features/user/actions";
 import { RefreshCwIcon } from "@yamada-ui/lucide";
 import {
   Avatar,
@@ -18,10 +18,11 @@ import type { Article } from "../types";
 
 interface ArticleCardProps {
   article: Article;
-  user: UserWithRelations;
 }
 
-const ArticleCard = ({ article, user }: ArticleCardProps) => {
+const ArticleCard = async ({ article }: ArticleCardProps) => {
+  const user = await getUser(article.userId);
+
   const articlePath = `/${user.username}/articles/${article.id}`;
   const authorProfilePath = `/${user.username}`;
 

@@ -7,7 +7,6 @@ import {
   TaskStatus,
   taskFormSchema,
 } from "@/features/task/types";
-import type { RegistrationWithRelations } from "@/features/timetable/types";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@yamada-ui/calendar";
@@ -24,22 +23,26 @@ import {
   Textarea,
   VStack,
 } from "@yamada-ui/react";
-import { useTaskStore } from "../store/useTaskStore";
 import "dayjs/locale/ja";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
 
 interface CreateTaskFormProps {
   onSuccess?: () => void;
-  registrations?: RegistrationWithRelations[];
+  lectureItems?: SelectItem[];
   defaultRegistrationId?: string;
+  onCreate: (
+    data: Omit<TaskFormData, "status">,
+  ) => Promise<unknown>;
+  isPending?: boolean;
 }
 
 const CreateTaskForm = ({
   onSuccess,
-  registrations,
+  lectureItems,
   defaultRegistrationId,
+  onCreate,
+  isPending = false,
 }: CreateTaskFormProps) => {
-  const { createTask, isPending } = useTaskStore();
   const { withFeedback } = useActionFeedback();
 
   const {
@@ -59,23 +62,19 @@ const CreateTaskForm = ({
     },
   });
 
-  const lectureItems: SelectItem[] | undefined = registrations?.map(
-    registration => ({
-      label: registration.lecture.name,
-      value: String(registration.id),
-    }),
-  );
-
   const handleFormSubmit: SubmitHandler<TaskFormData> = async data => {
-    const registrationId = data.registrationId || defaultRegistrationId;
+    const registrationId =
+      data.registrationId === undefined
+        ? defaultRegistrationId
+        : data.registrationId ?? undefined;
 
     const result = await withFeedback(
-      createTask({
+      onCreate({
         title: data.title,
         description: data.description,
         priority: data.priority as TaskPriorityType,
         dueDate: data.dueDate || undefined,
-        registrationId: registrationId || undefined,
+        registrationId,
       }),
       {
         successMessage: "新しいタスクを作成しました",

@@ -107,7 +107,8 @@ const AttendanceCounter = ({
                 aria-label="出席回数を減らす"
                 icon={<MinusIcon />}
                 onClick={handleAttendanceDecrement}
-                isDisabled={isPending || attendanceCount <= 0}
+                disabled={attendanceCount <= 0}
+                loading={isPending}
                 colorScheme="red"
                 variant="outline"
                 size="lg"
@@ -133,7 +134,8 @@ const AttendanceCounter = ({
                 aria-label="出席を記録する"
                 icon={<PlusIcon />}
                 onClick={handleAttendanceIncrement}
-                isDisabled={isPending || attendanceCount >= 15}
+                disabled={attendanceCount >= 15}
+                loading={isPending}
                 colorScheme="blue"
                 variant="outline"
                 rounded={"full"}
@@ -146,7 +148,7 @@ const AttendanceCounter = ({
           {externalSystemUrl && (
             <Button
               onClick={handleExternalSystemNavigate}
-              rightIcon={<ExternalLinkIcon />}
+              endIcon={<ExternalLinkIcon />}
               colorScheme="teal"
               variant="outline"
               mt={4}

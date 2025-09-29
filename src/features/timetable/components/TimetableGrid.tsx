@@ -1,28 +1,15 @@
-import type {
-  RegistrationWithRelations,
-  Term,
-} from "@/features/timetable/types";
 import { Grid, GridItem, Text, VStack } from "@yamada-ui/react";
 import Link from "next/link";
 import React from "react";
+import { DAYS, TIMES, TIMES_VALUE } from "../constant";
+import { getScheduleKey } from "../utils";
+import TimetableCell from "./TimetableCell";
 
 interface TimeTableGridProps {
-  registrationsMap: Map<number, RegistrationWithRelations>;
-  term: Term;
+  termId: string;
 }
 
-const DAYS = [1, 2, 3, 4, 5];
-const TIMES = [1, 2, 3, 4, 5];
-const MAX_TIME = 5;
-const TIMES_VALUE = [
-  "9:00~10:30",
-  "10:40~12:10",
-  "13:00~14:30",
-  "14:40~16:10",
-  "16:20~17:50",
-];
-
-const TimeTableGrid = ({ registrationsMap, term }: TimeTableGridProps) => {
+const TimeTableGrid = ({ termId }: TimeTableGridProps) => {
   return (
     <Grid
       templateColumns={{
@@ -47,13 +34,10 @@ const TimeTableGrid = ({ registrationsMap, term }: TimeTableGridProps) => {
       {TIMES.map(time => (
         <React.Fragment key={time}>
           {DAYS.map(day => {
-            const key = (day - 1) * MAX_TIME + time;
-            const registration = registrationsMap.get(key);
-            const lecture = registration?.lecture;
+            const key = getScheduleKey(day, time);
             return (
-              <Link key={key} href={`/timetable/${term.id}/${key}`} passHref>
+              <Link href={`/timetable/${termId}/${key}`} key={key} passHref>
                 <GridItem
-                  key={key}
                   bg={["white", "black"]}
                   p={{ base: "md", md: "xs" }}
                   border="1px solid"
@@ -70,28 +54,7 @@ const TimeTableGrid = ({ registrationsMap, term }: TimeTableGridProps) => {
                     alignItems="center"
                     justifyContent="center"
                   >
-                    {lecture ? (
-                      <>
-                        <Text
-                          fontSize={{ base: "md", md: "sm" }}
-                          fontWeight="medium"
-                          lineClamp={2}
-                          lineBreak={"anywhere"}
-                        >
-                          {lecture.name}
-                        </Text>
-
-                        <Text
-                          fontSize={{ base: "sm", md: "xs" }}
-                          lineBreak={"anywhere"}
-                          lineClamp={1}
-                        >
-                          {lecture.room || "未登録"}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text color="gray.500">クリックして追加</Text>
-                    )}
+                    <TimetableCell termId={termId} scheduleKey={key} />
                   </VStack>
                 </GridItem>
               </Link>

@@ -1,4 +1,7 @@
+"use client";
+
 import type { Lecture } from "@/features/timetable/types";
+import useActionFeedback from "@/hooks/useActionFeedback";
 import {
   Box,
   Button,
@@ -13,17 +16,33 @@ import {
   VStack,
   useDisclosure,
 } from "@yamada-ui/react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { unregisterById } from "../actions";
 
 interface SettingsTabProps {
   lecture: Lecture;
-  onDeleteRegistration: () => void;
+  registrationId: string;
 }
 
-const LectureSettingsTab = ({
-  lecture,
-  onDeleteRegistration,
-}: SettingsTabProps) => {
+const LectureSettingsTab = ({ lecture, registrationId }: SettingsTabProps) => {
   const { open, onOpen, onClose } = useDisclosure();
+
+  const router = useRouter();
+  const { withFeedback } = useActionFeedback();
+  const [isPending, startTransition] = useTransition();
+
+  // 講義登録を削除
+  const handleDeleteRegistration = () => {
+    startTransition(async () => {
+      await withFeedback(unregisterById(registrationId), {
+        successMessage: "講義の登録を削除しました",
+        successTitle: "登録削除",
+      });
+
+      router.refresh();
+    });
+  };
 
   return (
     <VStack align="start" w="full">
@@ -70,8 +89,9 @@ const LectureSettingsTab = ({
             <Button
               colorScheme="red"
               ml={3}
+              loading={isPending}
               onClick={async () => {
-                await onDeleteRegistration();
+                await handleDeleteRegistration();
                 onClose();
               }}
             >
