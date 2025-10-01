@@ -16,6 +16,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
           scope: "openid profile email User.Read",
         },
       },
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   pages: {
