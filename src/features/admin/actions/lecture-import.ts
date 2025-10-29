@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import {
   type ImportResult,
@@ -88,39 +88,71 @@ export const importLectureData = async (
     }
 
     const data = validation.data;
-    let lectureCount = 0;
-    const errors: string[] = [];
+    const departmentMap = await preloadDepartments(prisma, data);
 
-    // トランザクションで一括処理
-    await prisma.$transaction(async (tx) => {
-      for (const item of data) {
-        try {
-          console.log(
-            `Processing lecture: ${item.syllabusCode} - ${item.name}`
-          );
-
-          await upsertLectureFromImport(tx, item, ownerId);
-
-          lectureCount++;
-          console.log(
-            `Successfully processed lecture ${lectureCount}/${data.length}`
-          );
-        } catch (error) {
-          const errorMsg = `ID: ${item.syllabusCode} - ${
-            error instanceof Error ? error.message : String(error)
-          }`;
-          errors.push(errorMsg);
-          console.error(errorMsg);
-          throw error; // トランザクションをロールバック
+    const missingDepartmentErrors = data
+      .map((item) => {
+        const missing = item.departments.filter(
+          (name) => !departmentMap.has(name)
+        );
+        if (missing.length === 0) {
+          return null;
         }
-      }
+        const errorMsg = `ID: ${
+          item.syllabusCode
+        } - 未登録の学科: ${missing.join(", ")}`;
+        console.error(errorMsg);
+        return errorMsg;
+      })
+      .filter((msg): msg is string => Boolean(msg));
+
+    if (missingDepartmentErrors.length > 0) {
+      return {
+        success: false,
+        message: "存在しない学科が含まれているためインポートを中止しました",
+        errors: missingDepartmentErrors,
+      };
+    }
+
+    const operations: Prisma.PrismaPromise<unknown>[] = data.map((item) => {
+      console.log(`Processing lecture: ${item.syllabusCode} - ${item.name}`);
+
+      const scheduleIds = toScheduleIds(item.schedules);
+      const departmentIds = item.departments
+        .map((name) => departmentMap.get(name))
+        .filter((id): id is string => Boolean(id));
+
+      console.log(
+        `Found ${departmentIds.length} departments for ${item.departments.join(
+          ", "
+        )}`
+      );
+
+      const lectureData = buildLectureData(
+        item,
+        ownerId,
+        scheduleIds,
+        departmentIds
+      );
+
+      return prisma.lecture.upsert({
+        where: { syllabusCode: item.syllabusCode },
+        create: lectureData,
+        update: lectureData,
+      });
     });
+
+    await prisma.$transaction(operations);
+
+    const lectureCount = data.length;
+    console.log(
+      `Successfully processed ${lectureCount}/${data.length} lectures`
+    );
 
     return {
       success: true,
       message: `${lectureCount}件の講義データをインポートしました`,
       lectureCount,
-      errors: errors.length > 0 ? errors : undefined,
     };
   } catch (error) {
     console.error("Import error:", error);
@@ -172,52 +204,21 @@ const buildLectureData = (
   },
 });
 
-type LectureWriteData = ReturnType<typeof buildLectureData>;
-
-const upsertLecture = async (
-  tx: Prisma.TransactionClient,
-  syllabusCode: string,
-  data: LectureWriteData
+const preloadDepartments = async (
+  client: Prisma.TransactionClient | PrismaClient,
+  items: LectureImportData[]
 ) => {
-  const existing = await tx.lecture.findUnique({
-    where: { syllabusCode },
-  });
+  const departmentNames = Array.from(
+    new Set(items.flatMap((item) => item.departments))
+  );
 
-  if (existing) {
-    console.log(`Updating existing lecture: ${existing.id}`);
-    await tx.lecture.update({
-      where: { id: existing.id },
-      data,
-    });
-    return;
+  if (departmentNames.length === 0) {
+    return new Map<string, string>();
   }
 
-  console.log(`Creating new lecture: ${syllabusCode}`);
-  await tx.lecture.create({
-    data,
-  });
-};
-
-const upsertLectureFromImport = async (
-  tx: Prisma.TransactionClient,
-  item: LectureImportData,
-  ownerId: string
-) => {
-  const scheduleIds = toScheduleIds(item.schedules);
-  const departments = await tx.department.findMany({
-    where: { name: { in: item.departments } },
+  const departments = await client.department.findMany({
+    where: { name: { in: departmentNames } },
   });
 
-  console.log(
-    `Found ${departments.length} departments for ${item.departments.join(", ")}`
-  );
-
-  const lectureData = buildLectureData(
-    item,
-    ownerId,
-    scheduleIds,
-    departments.map(({ id }) => id)
-  );
-
-  await upsertLecture(tx, item.syllabusCode, lectureData);
+  return new Map(departments.map(({ name, id }) => [name, id]));
 };
