@@ -1,28 +1,4 @@
-import type { RegistrationWithRelations } from "./types";
-
-/**
- * 講義登録情報から時間割マップを構築する
- * @param registrations - 講義登録情報の配列
- * @returns 時間割キー（曜日と時限から計算）から登録情報へのマップ
- */
-export const buildRegistrationMap = (
-  registrations: RegistrationWithRelations[],
-) => {
-  const map = new Map<number, RegistrationWithRelations>();
-
-  for (const registration of registrations) {
-    // lecture.schedulesから各スケジュールの曜日と時限を取得してマッピング
-    if (registration.lecture?.schedules) {
-      for (const schedule of registration.lecture.schedules) {
-        // scheduleKeyを計算（曜日-1）* 5 + 時限
-        const key = (schedule.day - 1) * 5 + schedule.time;
-        map.set(key, registration);
-      }
-    }
-  }
-
-  return map;
-};
+import { MAX_TIME } from "./constant";
 
 /**
  * 年度とタームを検証する
@@ -48,7 +24,7 @@ export const isValidTermYear = (year: number, term: number) => {
  * @returns スケジュールキー
  */
 export const getScheduleKey = (day: number, time: number) => {
-  return (day - 1) * 5 + time;
+  return (day - 1) * MAX_TIME + time;
 };
 
 /**
@@ -57,9 +33,7 @@ export const getScheduleKey = (day: number, time: number) => {
  * @returns day:日付の数値(月=1, 火=2, ...), time:時限の数値(1限=1, 2限=2, ...)
  */
 export const getDayTimeByScheduleKey = (scheduleKey: number) => {
-  const day = Math.floor(scheduleKey / 5) + 1;
-  const time = scheduleKey % 5;
+  const day = Math.floor(scheduleKey / MAX_TIME) + 1;
+  const time = scheduleKey % MAX_TIME;
   return { day, time };
 };
-
-// buildRegistrationMapFromIds は不要 - includeパターンで統一

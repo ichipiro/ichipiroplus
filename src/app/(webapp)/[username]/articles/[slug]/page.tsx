@@ -32,10 +32,10 @@ const ArticlePage = async ({ params }: ArticlePageProps) => {
     notFound();
   }
 
-  let relatedArticles: (typeof article)[] = [];
-
   const otherArticles = await getUserArticles(author.id);
-  relatedArticles = otherArticles.filter(a => a.id !== article.id).slice(0, 4);
+  const relatedArticles = otherArticles
+    .filter(a => a.id !== article.id)
+    .slice(0, 4);
 
   const isAuthor =
     !!currentUserProfile && currentUserProfile.username === username;

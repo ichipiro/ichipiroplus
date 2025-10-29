@@ -2,12 +2,8 @@
 
 import { getMe } from "@/features/user/actions";
 import { prisma } from "@/lib/prisma";
-import type {
-  CreateTaskData,
-  TaskStatusType,
-  TaskWithRelations,
-  UpdateTaskData,
-} from "../types";
+import type { Task } from "@prisma/client";
+import type { CreateTaskData, TaskStatusType, UpdateTaskData } from "../types";
 import { TaskPriority, TaskStatus } from "../types";
 
 /**
@@ -16,7 +12,7 @@ import { TaskPriority, TaskStatus } from "../types";
 export const getMyTasks = async (
   status?: TaskStatusType,
   registrationId?: string,
-): Promise<TaskWithRelations[]> => {
+): Promise<Task[]> => {
   const userId = await getMe();
 
   return await prisma.task.findMany({
@@ -24,13 +20,6 @@ export const getMyTasks = async (
       userId,
       ...(status && { status }),
       ...(registrationId && { registrationId }),
-    },
-    include: {
-      registration: {
-        include: {
-          lecture: true,
-        },
-      },
     },
     orderBy: [
       { status: "asc" },
@@ -44,20 +33,13 @@ export const getMyTasks = async (
 /**
  * タスク詳細を取得
  */
-export const getTask = async (id: string): Promise<TaskWithRelations> => {
+export const getTask = async (id: string): Promise<Task> => {
   const userId = await getMe();
 
   const task = await prisma.task.findFirst({
     where: {
       id,
       userId,
-    },
-    include: {
-      registration: {
-        include: {
-          lecture: true,
-        },
-      },
     },
   });
 
@@ -71,9 +53,7 @@ export const getTask = async (id: string): Promise<TaskWithRelations> => {
 /**
  * タスクを作成
  */
-export const createTask = async (
-  data: CreateTaskData,
-): Promise<TaskWithRelations> => {
+export const createTask = async (data: CreateTaskData): Promise<Task> => {
   const userId = await getMe();
 
   // registrationIdが指定された場合、所有者チェック
@@ -100,13 +80,6 @@ export const createTask = async (
       userId,
       registrationId: data.registrationId,
     },
-    include: {
-      registration: {
-        include: {
-          lecture: true,
-        },
-      },
-    },
   });
 
   return task;
@@ -118,7 +91,7 @@ export const createTask = async (
 export const updateTask = async (
   id: string,
   data: UpdateTaskData,
-): Promise<TaskWithRelations> => {
+): Promise<Task> => {
   const userId = await getMe();
 
   // 所有者チェック
@@ -134,7 +107,7 @@ export const updateTask = async (
   }
 
   // registrationIdが変更される場合、新しい登録の所有者チェック
-  if (!data.registrationId && data.registrationId !== existing.registrationId) {
+  if (data.registrationId && data.registrationId !== existing.registrationId) {
     const registration = await prisma.registration.findFirst({
       where: {
         id: data.registrationId,
@@ -161,13 +134,6 @@ export const updateTask = async (
         registrationId: data.registrationId,
       }),
     },
-    include: {
-      registration: {
-        include: {
-          lecture: true,
-        },
-      },
-    },
   });
 
   return task;
@@ -179,7 +145,7 @@ export const updateTask = async (
 export const updateTaskStatus = async (
   id: string,
   status: TaskStatusType,
-): Promise<TaskWithRelations> => {
+): Promise<Task> => {
   return updateTask(id, { status });
 };
 

@@ -1,8 +1,6 @@
-import { getMyRegistrations } from "@/features/timetable/actions/registrations";
-import { getTerm, getTerms } from "@/features/timetable/actions/terms";
+import { getTerm } from "@/features/timetable/actions/terms";
 import TimetableGrid from "@/features/timetable/components/TimetableGrid";
 import TimetablePicker from "@/features/timetable/components/TimetablePicker";
-import { buildRegistrationMap } from "@/features/timetable/utils";
 import { Box, HStack, Heading, VStack } from "@yamada-ui/react";
 
 interface TimeTablePageProps {
@@ -13,9 +11,6 @@ interface TimeTablePageProps {
 
 const TimeTablePage = async ({ params }: TimeTablePageProps) => {
   const term = await getTerm(params.termId);
-  const allTerms = await getTerms();
-  const registrations = await getMyRegistrations(term.id);
-  const registrationsMap = buildRegistrationMap(registrations);
 
   return (
     <VStack alignItems="center" gap={4}>
@@ -29,10 +24,10 @@ const TimeTablePage = async ({ params }: TimeTablePageProps) => {
       </Box>
 
       {/* 年度・ターム選択 */}
-      <TimetablePicker nowTerm={term} allTerms={allTerms} />
+      <TimetablePicker nowTerm={term} />
 
       {/* 時間割グリッド */}
-      <TimetableGrid registrationsMap={registrationsMap} term={term} />
+      <TimetableGrid termId={params.termId} />
     </VStack>
   );
 };

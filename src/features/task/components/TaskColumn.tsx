@@ -1,17 +1,30 @@
-"use client";
-
 import TaskItem from "@/features/task/components/TaskItem";
-import type { TaskWithRelations } from "@/features/task/types";
+import type { Task } from "@prisma/client";
 import { Box, HStack, Heading, Text, VStack } from "@yamada-ui/react";
 import type { ReactNode } from "react";
+import type { TaskStatusType } from "../types";
 
 interface TaskColumnProps {
   title: string;
-  tasks: TaskWithRelations[];
+  tasks: Task[];
   extraHeader?: ReactNode;
+  isPending: boolean;
+  onUpdateStatus: (taskId: string, status: TaskStatusType) => Promise<Task>;
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
+  registrationLabels?: Record<string, ReactNode>;
 }
 
-const TaskColumn = ({ title, tasks, extraHeader }: TaskColumnProps) => {
+const TaskColumn = ({
+  title,
+  tasks,
+  extraHeader,
+  isPending,
+  onUpdateStatus,
+  onEdit,
+  onDelete,
+  registrationLabels,
+}: TaskColumnProps) => {
   return (
     <Box>
       <HStack justifyContent="space-between" mb={4}>
@@ -31,7 +44,16 @@ const TaskColumn = ({ title, tasks, extraHeader }: TaskColumnProps) => {
             <TaskItem
               key={task.id}
               task={task}
-              showLecture={true} // 講義ページと区別するために常に講義名を表示
+              showLecture
+              isPending={isPending}
+              onUpdateStatus={onUpdateStatus}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              registrationLabel={
+                task.registrationId
+                  ? registrationLabels?.[task.registrationId] ?? undefined
+                  : undefined
+              }
             />
           ))}
         </VStack>

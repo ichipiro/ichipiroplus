@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import {
   type ImportResult,
@@ -77,6 +78,7 @@ export const importLectureData = async (
 
     // データの検証
     const validation = await validateLectureData(jsonString);
+
     if (!validation.valid || !validation.data) {
       return {
         success: false,
@@ -93,81 +95,22 @@ export const importLectureData = async (
     await prisma.$transaction(async (tx) => {
       for (const item of data) {
         try {
-          console.log(`Processing lecture: ${item.id} - ${item.name}`);
-          // スケジュールIDを計算（正しい計算式に修正）
-          const scheduleIds = item.schedules.map((sch) => {
-            // day: 1-5, time: 1-7
-            // IDは1から始まる連番
-            const id = (sch.day - 1) * 5 + sch.time;
-            console.log(`Schedule: day=${sch.day}, time=${sch.time}, id=${id}`);
-            return id;
-          });
-
-          // 部門データの取得
-          const departments = await tx.department.findMany({
-            where: { name: { in: item.departments } },
-          });
           console.log(
-            `Found ${
-              departments.length
-            } departments for ${item.departments.join(", ")}`
+            `Processing lecture: ${item.syllabusCode} - ${item.name}`
           );
 
-          // 講義データの作成
-          const lectureData = {
-            syllabusCode: item.id,
-            name: item.name,
-            instructor: item.instructor || "未定",
-            room: item.room || null,
-            grade: item.grade,
-            units: item.units || 0,
-            purpose: item.purpose || null,
-            goal: item.goal || null,
-            description: item.description || null,
-            evalMethod: item.eval_method || null,
-            textbook: item.textbook || null,
-            feedback: item.feedback || null,
-            isRequired: item.is_required,
-            isExam: item.is_exam,
-            ownerId: ownerId,
-            sourceType: "scraped",
-            termNumbers: item.terms, // 概念的ターム番号配列に直接設定
-            schedules: {
-              connect: scheduleIds.map((id) => ({ id })),
-            },
-            departments: {
-              connect: departments.map((d) => ({ id: d.id })),
-            },
-          };
+          await upsertLectureFromImport(tx, item, ownerId);
 
-          const existingLecture = await tx.lecture.findUnique({
-            where: { syllabusCode: item.id },
-          });
-
-          if (existingLecture) {
-            console.log(`Updating existing lecture: ${existingLecture.id}`);
-            await tx.lecture.update({
-              where: { id: existingLecture.id },
-              data: lectureData,
-            });
-          } else {
-            console.log(`Creating new lecture: ${item.id}`);
-            await tx.lecture.create({
-              data: lectureData,
-            });
-          }
           lectureCount++;
           console.log(
             `Successfully processed lecture ${lectureCount}/${data.length}`
           );
         } catch (error) {
-          const errorMsg = `ID: ${item.id} - ${
+          const errorMsg = `ID: ${item.syllabusCode} - ${
             error instanceof Error ? error.message : String(error)
           }`;
           errors.push(errorMsg);
           console.error(errorMsg);
-          // エラーが発生してもトランザクション全体を失敗させない
-          // 必要に応じてthrowしてロールバックさせる
           throw error; // トランザクションをロールバック
         }
       }
@@ -190,4 +133,91 @@ export const importLectureData = async (
       errors: [error instanceof Error ? error.message : "不明なエラー"],
     };
   }
+};
+
+const toScheduleIds = (schedules: LectureImportData["schedules"]) =>
+  schedules.map(({ day, time }) => (day - 1) * 5 + time);
+
+const connectById = <T extends string | number>(ids: T[]) =>
+  ids.map((id) => ({ id }));
+
+const buildLectureData = (
+  item: LectureImportData,
+  ownerId: string,
+  scheduleIds: number[],
+  departmentIds: string[]
+) => ({
+  syllabusCode: item.syllabusCode,
+  name: item.name,
+  instructor: item.instructor ?? "未定",
+  room: item.room ?? null,
+  grade: item.grade,
+  units: item.units ?? 0,
+  purpose: item.purpose ?? null,
+  goal: item.goal ?? null,
+  description: item.description ?? null,
+  evalMethod: item.evalMethod ?? null,
+  textbook: item.textbook ?? null,
+  feedback: item.feedback ?? null,
+  isRequired: item.isRequired,
+  isExam: item.isExam,
+  ownerId,
+  sourceType: "scraped" as const,
+  termNumbers: item.termNumbers,
+  schedules: {
+    connect: connectById(scheduleIds),
+  },
+  departments: {
+    connect: connectById(departmentIds),
+  },
+});
+
+type LectureWriteData = ReturnType<typeof buildLectureData>;
+
+const upsertLecture = async (
+  tx: Prisma.TransactionClient,
+  syllabusCode: string,
+  data: LectureWriteData
+) => {
+  const existing = await tx.lecture.findUnique({
+    where: { syllabusCode },
+  });
+
+  if (existing) {
+    console.log(`Updating existing lecture: ${existing.id}`);
+    await tx.lecture.update({
+      where: { id: existing.id },
+      data,
+    });
+    return;
+  }
+
+  console.log(`Creating new lecture: ${syllabusCode}`);
+  await tx.lecture.create({
+    data,
+  });
+};
+
+const upsertLectureFromImport = async (
+  tx: Prisma.TransactionClient,
+  item: LectureImportData,
+  ownerId: string
+) => {
+  const scheduleIds = toScheduleIds(item.schedules);
+  const departments = await tx.department.findMany({
+    where: { name: { in: item.departments } },
+  });
+
+  console.log(
+    `Found ${departments.length} departments for ${item.departments.join(", ")}`
+  );
+
+  const lectureData = buildLectureData(
+    item,
+    ownerId,
+    scheduleIds,
+    departments.map(({ id }) => id)
+  );
+
+  await upsertLecture(tx, item.syllabusCode, lectureData);
 };

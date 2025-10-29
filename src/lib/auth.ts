@@ -16,6 +16,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
           scope: "openid profile email User.Read",
         },
       },
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   pages: {
@@ -68,6 +69,16 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
         session.user.isProfileComplete = token.isProfileComplete as boolean;
       }
       return session;
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      if (process.env.NODE_ENV !== "production") {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { isAdmin: true },
+        });
+      }
     },
   },
 });

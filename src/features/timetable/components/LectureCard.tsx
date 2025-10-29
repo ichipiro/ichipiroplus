@@ -89,7 +89,7 @@ const LectureCard = ({ lecture, termId }: LectureCardProps) => {
               alignSelf="end"
               onClick={() => handleRegister(lecture.id)}
               loading={isPending}
-              isDisabled={isPending}
+              disabled={isPending}
             >
               登録
             </Button>
