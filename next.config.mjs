@@ -13,4 +13,9 @@ const withPWA = withPWAInit({
 
 export default withPWA({
   reactStrictMode: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "5mb",
+    },
+  },
 });
