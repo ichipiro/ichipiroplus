@@ -114,45 +114,59 @@ export const importLectureData = async (
       };
     }
 
-    const operations: Prisma.PrismaPromise<unknown>[] = data.map((item) => {
-      console.log(`Processing lecture: ${item.syllabusCode} - ${item.name}`);
+    let lectureCount = 0;
+    const errors: string[] = [];
 
-      const scheduleIds = toScheduleIds(item.schedules);
-      const departmentIds = item.departments
-        .map((name) => departmentMap.get(name))
-        .filter((id): id is string => Boolean(id));
+    for (const item of data) {
+      try {
+        console.log(`Processing lecture: ${item.syllabusCode} - ${item.name}`);
 
-      console.log(
-        `Found ${departmentIds.length} departments for ${item.departments.join(
-          ", "
-        )}`
-      );
+        const scheduleIds = toScheduleIds(item.schedules);
+        const departmentIds = item.departments
+          .map((name) => departmentMap.get(name))
+          .filter((id): id is string => Boolean(id));
 
-      const lectureData = buildLectureData(
-        item,
-        ownerId,
-        scheduleIds,
-        departmentIds
-      );
+        console.log(
+          `Found ${
+            departmentIds.length
+          } departments for ${item.departments.join(", ")}`
+        );
 
-      return prisma.lecture.upsert({
-        where: { syllabusCode: item.syllabusCode },
-        create: lectureData,
-        update: lectureData,
-      });
-    });
+        const lectureData = buildLectureData(
+          item,
+          ownerId,
+          scheduleIds,
+          departmentIds
+        );
 
-    await prisma.$transaction(operations);
+        await prisma.lecture.upsert({
+          where: { syllabusCode: item.syllabusCode },
+          create: lectureData,
+          update: lectureData,
+        });
 
-    const lectureCount = data.length;
-    console.log(
-      `Successfully processed ${lectureCount}/${data.length} lectures`
-    );
+        lectureCount++;
+        console.log(
+          `Successfully processed lecture ${lectureCount}/${data.length}`
+        );
+      } catch (error) {
+        const errorMsg = `ID: ${item.syllabusCode} - ${
+          error instanceof Error ? error.message : String(error)
+        }`;
+        errors.push(errorMsg);
+        console.error(errorMsg);
+      }
+    }
+
+    const success = errors.length === 0;
 
     return {
-      success: true,
-      message: `${lectureCount}件の講義データをインポートしました`,
+      success,
+      message: success
+        ? `${lectureCount}件の講義データをインポートしました`
+        : `${lectureCount}件の講義データをインポートしましたが、${errors.length}件失敗しました`,
       lectureCount,
+      errors: errors.length > 0 ? errors : undefined,
     };
   } catch (error) {
     console.error("Import error:", error);
