@@ -1,6 +1,7 @@
 "use server";
 
 import { auth, unstable_update } from "@/lib/auth";
+import { ConflictError, NotFoundError, UnauthorizedError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import type { Department, Faculty } from "@prisma/client";
 import type { UserWithRelations } from "../types";
@@ -8,7 +9,7 @@ import type { UserWithRelations } from "../types";
 export const getMe = async (): Promise<string> => {
   const session = await auth();
   if (!session?.user) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError();
   }
   return session.user.id;
 };
@@ -28,7 +29,7 @@ export const getCurrentUser = async (): Promise<UserWithRelations> => {
   });
 
   if (!user) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError();
   }
 
   return user;
@@ -50,7 +51,7 @@ export const getCurrentUserOptional =
     });
 
     if (!user) {
-      throw new Error("Unauthorized");
+      throw new UnauthorizedError();
     }
 
     return user;
@@ -71,7 +72,7 @@ export const getUserByUsername = async (
   });
 
   if (!user) {
-    throw new Error(`ユーザー名が"${username}"のユーザーが見つかりません`);
+    throw new NotFoundError(`ユーザー名が"${username}"のユーザー`);
   }
 
   return user;
@@ -90,7 +91,7 @@ export const getUser = async (id: string): Promise<UserWithRelations> => {
   });
 
   if (!user) {
-    throw new Error("ユーザーが見つかりません");
+    throw new NotFoundError("ユーザー");
   }
 
   return user;
@@ -142,7 +143,7 @@ export const updateUser = async (
     });
 
     if (existing) {
-      throw new Error("このユーザー名は既に使用されています");
+      throw new ConflictError("このユーザー名は既に使用されています");
     }
   }
 
@@ -192,6 +193,23 @@ export const deleteAccount = async (): Promise<void> => {
   await prisma.user.delete({
     where: { id },
   });
+};
+
+/**
+ * 時間割公開設定を更新
+ */
+export const updateTimetableVisibility = async (
+  isTimetablePublic: boolean,
+): Promise<boolean> => {
+  const userId = await getMe();
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isTimetablePublic },
+    select: { isTimetablePublic: true },
+  });
+
+  return updated.isTimetablePublic;
 };
 
 /**

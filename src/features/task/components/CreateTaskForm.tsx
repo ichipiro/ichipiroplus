@@ -30,9 +30,7 @@ interface CreateTaskFormProps {
   onSuccess?: () => void;
   lectureItems?: SelectItem[];
   defaultRegistrationId?: string;
-  onCreate: (
-    data: Omit<TaskFormData, "status">,
-  ) => Promise<unknown>;
+  onCreate: (data: Omit<TaskFormData, "status">) => Promise<unknown>;
   isPending?: boolean;
 }
 
@@ -66,7 +64,7 @@ const CreateTaskForm = ({
     const registrationId =
       data.registrationId === undefined
         ? defaultRegistrationId
-        : data.registrationId ?? undefined;
+        : (data.registrationId ?? undefined);
 
     const result = await withFeedback(
       onCreate({

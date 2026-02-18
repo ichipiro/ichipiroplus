@@ -37,10 +37,7 @@ interface EditTaskModalProps {
   onSuccess?: () => void;
   task: Task | null;
   lectureItems?: SelectItem[];
-  onUpdate: (
-    taskId: string,
-    data: Partial<TaskFormData>,
-  ) => Promise<unknown>;
+  onUpdate: (taskId: string, data: Partial<TaskFormData>) => Promise<unknown>;
   isPending?: boolean;
 }
 

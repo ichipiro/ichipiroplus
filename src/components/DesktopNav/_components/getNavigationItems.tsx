@@ -26,6 +26,16 @@ export const getNavigationItems = (): NavMenuItem[] => {
       label: "時間割",
       icon: <CalendarIcon />,
       href: "/timetable",
+      children: [
+        {
+          label: "講義検索",
+          href: "/lectures",
+        },
+        {
+          label: "講義追加",
+          href: "/lectures/new",
+        },
+      ],
     },
     {
       label: "タスク",

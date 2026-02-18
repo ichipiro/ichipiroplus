@@ -17,9 +17,7 @@ const TimeTablePage = async ({ params }: TimeTablePageProps) => {
       {/* ヘッダー部分 */}
       <Box w="full" maxW="1200px">
         <HStack justify="space-between" mb={4}>
-          <Heading size="lg">
-            {term.year}年度 第{term.number}ターム
-          </Heading>
+          <Heading size="lg">第{term.number}ターム</Heading>
         </HStack>
       </Box>
 

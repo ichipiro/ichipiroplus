@@ -1,58 +1,131 @@
-/**
- * HTTP Error Classes
- * Server Actions / RSC で throw して error.tsx でキャッチする
- */
+export const APP_ERROR_PREFIX = "APP_ERROR";
 
-export abstract class HttpError extends Error {
-  abstract readonly statusCode: number;
+export const APP_ERROR_CODES = [
+  "BAD_REQUEST",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "NOT_FOUND",
+  "CONFLICT",
+  "INTERNAL_SERVER_ERROR",
+] as const;
 
-  constructor(message: string, cause?: unknown) {
-    super(message);
+export type AppErrorCode = (typeof APP_ERROR_CODES)[number];
+
+type ParsedAppError = {
+  code: AppErrorCode;
+  message: string;
+};
+
+const toSerializedMessage = (code: AppErrorCode, message: string) =>
+  `${APP_ERROR_PREFIX}:${code}:${message}`;
+
+const isAppErrorCode = (value: string): value is AppErrorCode =>
+  APP_ERROR_CODES.includes(value as AppErrorCode);
+
+export const parseAppError = (error: unknown): ParsedAppError | null => {
+  const rawMessage =
+    typeof error === "string"
+      ? error
+      : error instanceof Error
+        ? error.message
+        : null;
+
+  if (!rawMessage || !rawMessage.startsWith(`${APP_ERROR_PREFIX}:`)) {
+    return null;
+  }
+
+  const [, code, ...rest] = rawMessage.split(":");
+  if (!code || !isAppErrorCode(code)) {
+    return null;
+  }
+
+  return {
+    code,
+    message: rest.join(":") || "エラーが発生しました",
+  };
+};
+
+export class HttpError extends Error {
+  readonly code: AppErrorCode;
+  readonly statusCode: number;
+  readonly publicMessage: string;
+
+  constructor({
+    code,
+    statusCode,
+    message,
+    cause,
+  }: {
+    code: AppErrorCode;
+    statusCode: number;
+    message: string;
+    cause?: unknown;
+  }) {
+    super(toSerializedMessage(code, message), cause ? { cause } : undefined);
     this.name = this.constructor.name;
-    this.cause = cause;
+    this.code = code;
+    this.statusCode = statusCode;
+    this.publicMessage = message;
   }
 }
 
-/**
- * 400 Bad Request - バリデーションエラー
- */
 export class BadRequestError extends HttpError {
-  readonly statusCode = 400;
-
   constructor(message = "リクエストが正しくありません") {
-    super(message);
+    super({
+      code: "BAD_REQUEST",
+      statusCode: 400,
+      message,
+    });
   }
 }
 
-/**
- * 401 Unauthorized - 認証エラー
- */
 export class UnauthorizedError extends HttpError {
-  readonly statusCode = 401;
-
   constructor(message = "認証が必要です") {
-    super(message);
+    super({
+      code: "UNAUTHORIZED",
+      statusCode: 401,
+      message,
+    });
   }
 }
 
-/**
- * 404 Not Found - リソース不存在
- */
+export class ForbiddenError extends HttpError {
+  constructor(message = "この操作を実行する権限がありません") {
+    super({
+      code: "FORBIDDEN",
+      statusCode: 403,
+      message,
+    });
+  }
+}
+
 export class NotFoundError extends HttpError {
-  readonly statusCode = 404;
-
   constructor(resource = "リソース") {
-    super(`${resource}が見つかりません`);
+    super({
+      code: "NOT_FOUND",
+      statusCode: 404,
+      message: `${resource}が見つかりません`,
+    });
   }
 }
 
-/**
- * 500 Internal Server Error - サーバーエラー
- */
-export class InternalServerError extends HttpError {
-  readonly statusCode = 500;
+export class ConflictError extends HttpError {
+  constructor(message = "競合が発生しました") {
+    super({
+      code: "CONFLICT",
+      statusCode: 409,
+      message,
+    });
+  }
+}
 
-  constructor(message = "サーバー内部エラーが発生しました") {
-    super(message);
+export class InternalServerError extends HttpError {
+  constructor(message = "サーバー内部エラーが発生しました", cause?: unknown) {
+    super({
+      code: "INTERNAL_SERVER_ERROR",
+      statusCode: 500,
+      message,
+      cause,
+    });
   }
 }

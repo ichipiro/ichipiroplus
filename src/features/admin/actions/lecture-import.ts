@@ -14,7 +14,7 @@ import {
  * JSONデータをバリデーション
  */
 export const validateLectureData = async (
-  jsonString: string
+  jsonString: string,
 ): Promise<{
   valid: boolean;
   data?: LectureImportData[];
@@ -37,7 +37,7 @@ export const validateLectureData = async (
       } catch (error) {
         if (error instanceof z.ZodError) {
           errors.push(
-            `行 ${i + 1}: ${error.errors.map((e) => e.message).join(", ")}`
+            `行 ${i + 1}: ${error.errors.map(e => e.message).join(", ")}`,
           );
         }
       }
@@ -62,7 +62,7 @@ export const validateLectureData = async (
  * シラバスデータをインポート
  */
 export const importLectureData = async (
-  jsonString: string
+  jsonString: string,
 ): Promise<ImportResult> => {
   try {
     // セッション情報を事前に取得
@@ -91,9 +91,9 @@ export const importLectureData = async (
     const departmentMap = await preloadDepartments(prisma, data);
 
     const missingDepartmentErrors = data
-      .map((item) => {
+      .map(item => {
         const missing = item.departments.filter(
-          (name) => !departmentMap.has(name)
+          name => !departmentMap.has(name),
         );
         if (missing.length === 0) {
           return null;
@@ -123,31 +123,46 @@ export const importLectureData = async (
 
         const scheduleIds = toScheduleIds(item.schedules);
         const departmentIds = item.departments
-          .map((name) => departmentMap.get(name))
+          .map(name => departmentMap.get(name))
           .filter((id): id is string => Boolean(id));
 
         console.log(
           `Found ${
             departmentIds.length
-          } departments for ${item.departments.join(", ")}`
+          } departments for ${item.departments.join(", ")}`,
         );
 
-        const lectureData = buildLectureData(
+        const lectureBaseData = buildLectureBaseData(
           item,
           ownerId,
           scheduleIds,
-          departmentIds
+          departmentIds,
         );
 
-        await prisma.lecture.upsert({
+        const upserted = await prisma.lecture.upsert({
           where: { syllabusCode: item.syllabusCode },
-          create: lectureData,
-          update: lectureData,
+          create: lectureBaseData,
+          update: lectureBaseData,
+          select: { id: true },
         });
+
+        await prisma.lectureTerm.deleteMany({
+          where: { lectureId: upserted.id },
+        });
+
+        if (item.termNumbers.length > 0) {
+          await prisma.lectureTerm.createMany({
+            data: item.termNumbers.map(termNumber => ({
+              lectureId: upserted.id,
+              termNumber,
+            })),
+            skipDuplicates: true,
+          });
+        }
 
         lectureCount++;
         console.log(
-          `Successfully processed lecture ${lectureCount}/${data.length}`
+          `Successfully processed lecture ${lectureCount}/${data.length}`,
         );
       } catch (error) {
         const errorMsg = `ID: ${item.syllabusCode} - ${
@@ -185,13 +200,13 @@ const toScheduleIds = (schedules: LectureImportData["schedules"]) =>
   schedules.map(({ day, time }) => (day - 1) * 5 + time);
 
 const connectById = <T extends string | number>(ids: T[]) =>
-  ids.map((id) => ({ id }));
+  ids.map(id => ({ id }));
 
-const buildLectureData = (
+const buildLectureBaseData = (
   item: LectureImportData,
   ownerId: string,
   scheduleIds: number[],
-  departmentIds: string[]
+  departmentIds: string[],
 ) => ({
   syllabusCode: item.syllabusCode,
   name: item.name,
@@ -209,7 +224,6 @@ const buildLectureData = (
   isExam: item.isExam,
   ownerId,
   sourceType: "scraped" as const,
-  termNumbers: item.termNumbers,
   schedules: {
     connect: connectById(scheduleIds),
   },
@@ -220,10 +234,10 @@ const buildLectureData = (
 
 const preloadDepartments = async (
   client: Prisma.TransactionClient | PrismaClient,
-  items: LectureImportData[]
+  items: LectureImportData[],
 ) => {
   const departmentNames = Array.from(
-    new Set(items.flatMap((item) => item.departments))
+    new Set(items.flatMap(item => item.departments)),
   );
 
   if (departmentNames.length === 0) {

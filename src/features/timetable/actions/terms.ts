@@ -1,5 +1,6 @@
 "use server";
 
+import { NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import type { Term } from "@prisma/client";
 
@@ -8,16 +9,6 @@ import type { Term } from "@prisma/client";
  */
 export const getTerms = async (): Promise<Term[]> => {
   return await prisma.term.findMany({
-    orderBy: [{ year: "desc" }, { number: "asc" }],
-  });
-};
-
-/**
- * 特定年度の学期を取得
- */
-export const getTermsByYear = async (year: number): Promise<Term[]> => {
-  return await prisma.term.findMany({
-    where: { year },
     orderBy: { number: "asc" },
   });
 };
@@ -33,14 +24,36 @@ export const getCurrentTerm = async (): Promise<Term> => {
       startDate: { lte: now },
       endDate: { gte: now },
     },
-    orderBy: [{ year: "desc" }, { number: "desc" }],
+    orderBy: { number: "asc" },
   });
 
-  if (!currentTerm) {
-    throw new Error("学期が存在しません");
+  if (currentTerm) {
+    return currentTerm;
   }
 
-  return currentTerm;
+  const nextTerm = await prisma.term.findFirst({
+    where: {
+      startDate: { gt: now },
+    },
+    orderBy: { startDate: "asc" },
+  });
+
+  if (nextTerm) {
+    return nextTerm;
+  }
+
+  const lastTerm = await prisma.term.findFirst({
+    where: {
+      endDate: { lt: now },
+    },
+    orderBy: { endDate: "desc" },
+  });
+
+  if (lastTerm) {
+    return lastTerm;
+  }
+
+  throw new NotFoundError("学期");
 };
 
 /**
@@ -52,7 +65,7 @@ export const getTerm = async (termId: string): Promise<Term> => {
   });
 
   if (!term) {
-    throw new Error("学期が存在しません");
+    throw new NotFoundError("学期");
   }
 
   return term;

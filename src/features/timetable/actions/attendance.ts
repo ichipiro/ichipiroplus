@@ -1,6 +1,7 @@
 "use server";
 
 import { getMe } from "@/features/user/actions";
+import { BadRequestError, NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -21,12 +22,12 @@ export const incrementAttendance = async (
   });
 
   if (!registration) {
-    throw new Error("Registration not found");
+    throw new NotFoundError("講義登録");
   }
 
   // 最大15回まで
   if (registration.attendanceCount >= 15) {
-    throw new Error("Maximum attendance count reached");
+    throw new BadRequestError("出席回数は15回までです");
   }
 
   const updated = await prisma.registration.update({
@@ -59,12 +60,12 @@ export const decrementAttendance = async (
   });
 
   if (!registration) {
-    throw new Error("Registration not found");
+    throw new NotFoundError("講義登録");
   }
 
   // 最小0回まで
   if (registration.attendanceCount <= 0) {
-    throw new Error("Attendance count is already 0");
+    throw new BadRequestError("出席回数は0未満にできません");
   }
 
   const updated = await prisma.registration.update({

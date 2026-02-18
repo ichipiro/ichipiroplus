@@ -154,7 +154,7 @@ export function LectureImporter() {
                       以下のエラーが見つかりました：
                     </AlertDescription>
                     <List mt={2} fontSize="sm">
-                      {validationResult.errors?.slice(0, 5).map((error) => (
+                      {validationResult.errors?.slice(0, 5).map(error => (
                         <ListItem key={error} color="red.600">
                           {error}
                         </ListItem>
@@ -241,7 +241,7 @@ export function LectureImporter() {
                     エラー:
                   </Text>
                   <List fontSize="sm" mt={1}>
-                    {importResult.errors.slice(0, 5).map((error) => (
+                    {importResult.errors.slice(0, 5).map(error => (
                       <ListItem key={error} color="red.600">
                         {error}
                       </ListItem>

@@ -1,8 +1,14 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import {
+  ForbiddenError,
+  InternalServerError,
+  UnauthorizedError,
+} from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { webpush } from "@/lib/webpush";
+import type { NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import type {
@@ -18,12 +24,12 @@ import type {
  * サーバーに通知サブスクリプションを登録する
  */
 export const registerPushSubscription = async (
-  subscription: PushSubscriptionRequest
+  subscription: PushSubscriptionRequest,
 ): Promise<PushSubscriptionResponse> => {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError();
   }
 
   try {
@@ -69,7 +75,10 @@ export const registerPushSubscription = async (
     };
   } catch (error) {
     console.error("Push subscription registration error:", error);
-    throw new Error("Failed to register push subscription");
+    throw new InternalServerError(
+      "通知サブスクリプションの登録に失敗しました",
+      error,
+    );
   }
 };
 
@@ -82,7 +91,7 @@ export const getNotificationSettings = async (): Promise<
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError();
   }
 
   const subscriptions = await prisma.pushSubscription.findMany({
@@ -94,7 +103,7 @@ export const getNotificationSettings = async (): Promise<
     },
   });
 
-  return subscriptions.map((sub) => ({
+  return subscriptions.map(sub => ({
     id: sub.id,
     endpoint: sub.endpoint,
     task_reminders: sub.taskReminders,
@@ -110,12 +119,12 @@ export const getNotificationSettings = async (): Promise<
  */
 export const updateNotificationSettings = async (
   id: string,
-  settings: NotificationSettingsUpdateRequest
+  settings: NotificationSettingsUpdateRequest,
 ): Promise<{ success: boolean }> => {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError();
   }
 
   try {
@@ -136,7 +145,7 @@ export const updateNotificationSettings = async (
     return { success: true };
   } catch (error) {
     console.error("Notification settings update error:", error);
-    throw new Error("Failed to update notification settings");
+    throw new InternalServerError("通知設定の更新に失敗しました", error);
   }
 };
 
@@ -144,12 +153,12 @@ export const updateNotificationSettings = async (
  * 通知サブスクリプションを解除する
  */
 export const unregisterPushSubscription = async (
-  id: string
+  id: string,
 ): Promise<{ success: boolean }> => {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError();
   }
 
   try {
@@ -165,7 +174,10 @@ export const unregisterPushSubscription = async (
     return { success: true };
   } catch (error) {
     console.error("Push subscription unregister error:", error);
-    throw new Error("Failed to unregister push subscription");
+    throw new InternalServerError(
+      "通知サブスクリプションの解除に失敗しました",
+      error,
+    );
   }
 };
 
@@ -173,12 +185,12 @@ export const unregisterPushSubscription = async (
  * テスト通知を送信する
  */
 export const sendTestNotification = async (
-  request: TestNotificationRequest
+  request: TestNotificationRequest,
 ): Promise<TestNotificationResponse> => {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError();
   }
 
   try {
@@ -213,7 +225,7 @@ interface SendPushNotificationParams {
   title: string;
   body: string;
   url?: string;
-  notificationType: string;
+  notificationType: NotificationType;
 }
 
 export const sendPushNotification = async ({
@@ -303,8 +315,8 @@ export const sendPushNotification = async ({
           results.errors.push(
             `Invalid subscription removed: ${subscription.endpoint.slice(
               0,
-              50
-            )}...`
+              50,
+            )}...`,
           );
         }
 
@@ -342,7 +354,7 @@ interface SendBulkNotificationParams {
   title: string;
   body: string;
   url?: string;
-  notificationType: string;
+  notificationType: NotificationType;
 }
 
 export const sendBulkPushNotification = async ({
@@ -360,7 +372,7 @@ export const sendBulkPushNotification = async ({
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError();
   }
 
   // 管理者チェック
@@ -370,7 +382,7 @@ export const sendBulkPushNotification = async ({
   });
 
   if (!user?.isAdmin) {
-    throw new Error("Admin access required");
+    throw new ForbiddenError("管理者権限が必要です");
   }
 
   let targetUserIds: string[] = [];
@@ -379,7 +391,7 @@ export const sendBulkPushNotification = async ({
     const users = await prisma.user.findMany({
       select: { id: true },
     });
-    targetUserIds = users.map((u) => u.id);
+    targetUserIds = users.map(u => u.id);
   } else {
     targetUserIds = userIds;
   }

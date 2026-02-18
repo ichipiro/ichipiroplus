@@ -39,6 +39,7 @@ const StepProfile = ({
     departmentId: null,
     isProfileComplete: false,
     isAdmin: false,
+    isTimetablePublic: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     faculty: null,

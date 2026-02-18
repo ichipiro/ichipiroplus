@@ -1,6 +1,7 @@
 "use server";
 
 import { getMe } from "@/features/user/actions";
+import { NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import type { Task } from "@prisma/client";
 import type { CreateTaskData, TaskStatusType, UpdateTaskData } from "../types";
@@ -44,7 +45,7 @@ export const getTask = async (id: string): Promise<Task> => {
   });
 
   if (!task) {
-    throw new Error("タスクが見つかりません");
+    throw new NotFoundError("タスク");
   }
 
   return task;
@@ -66,7 +67,7 @@ export const createTask = async (data: CreateTaskData): Promise<Task> => {
     });
 
     if (!registration) {
-      throw new Error("指定された講義登録が見つかりません");
+      throw new NotFoundError("指定された講義登録");
     }
   }
 
@@ -103,7 +104,7 @@ export const updateTask = async (
   });
 
   if (!existing) {
-    throw new Error("タスクが見つかりません");
+    throw new NotFoundError("タスク");
   }
 
   // registrationIdが変更される場合、新しい登録の所有者チェック
@@ -116,7 +117,7 @@ export const updateTask = async (
     });
 
     if (!registration) {
-      throw new Error("指定された講義登録が見つかりません");
+      throw new NotFoundError("指定された講義登録");
     }
   }
 
@@ -167,7 +168,7 @@ export const deleteTask = async (id: string): Promise<void> => {
   });
 
   if (!task) {
-    throw new Error("タスクが見つかりません");
+    throw new NotFoundError("タスク");
   }
 
   await prisma.task.delete({

@@ -1,6 +1,13 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import {
+  BadRequestError,
+  ForbiddenError,
+  InternalServerError,
+  NotFoundError,
+  UnauthorizedError,
+} from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -14,7 +21,7 @@ import type { ArticleFormData, ArticlesResponse } from "../types";
  */
 export const getArticles = async (
   page = 1,
-  limit = 10
+  limit = 10,
 ): Promise<ArticlesResponse> => {
   const skip = (page - 1) * limit;
 
@@ -47,7 +54,7 @@ export const getArticle = async (id: string): Promise<Article> => {
   });
 
   if (!article) {
-    throw new Error("記事が見つかりません");
+    throw new NotFoundError("記事");
   }
   return article;
 };
@@ -57,7 +64,7 @@ export const getArticle = async (id: string): Promise<Article> => {
  */
 export const getUserArticles = async (
   userId: string,
-  includeUnpublished = false
+  includeUnpublished = false,
 ): Promise<Article[]> => {
   return await prisma.article.findMany({
     where: {
@@ -84,7 +91,7 @@ export const getMyArticles = async (): Promise<Article[]> => {
  * 記事を作成
  */
 export const createArticle = async (
-  data: ArticleFormData
+  data: ArticleFormData,
 ): Promise<Article> => {
   const userId = await getMe();
 
@@ -104,7 +111,7 @@ export const createArticle = async (
  */
 export const updateArticle = async (
   id: string,
-  data: Partial<ArticleFormData>
+  data: Partial<ArticleFormData>,
 ): Promise<Article> => {
   const userId = await getMe();
 
@@ -115,7 +122,7 @@ export const updateArticle = async (
   });
 
   if (!existing || existing.userId !== userId) {
-    throw new Error("この記事を編集する権限がありません");
+    throw new ForbiddenError("この記事を編集する権限がありません");
   }
 
   const article = await prisma.article.update({
@@ -154,18 +161,18 @@ export const uploadImage = async (data: {
   size: number;
 }): Promise<string> => {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!session?.user?.id) throw new UnauthorizedError();
 
   // ファイルサイズチェック（5MB）
   const MAX_FILE_SIZE = 5 * 1024 * 1024;
   if (data.size > MAX_FILE_SIZE) {
-    throw new Error("ファイルサイズは5MB以下にしてください");
+    throw new BadRequestError("ファイルサイズは5MB以下にしてください");
   }
 
   // ファイルタイプチェック
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   if (!allowedTypes.includes(data.contentType)) {
-    throw new Error("対応していないファイル形式です");
+    throw new BadRequestError("対応していないファイル形式です");
   }
 
   try {
@@ -185,7 +192,7 @@ export const uploadImage = async (data: {
         Key: key,
         Body: buffer,
         ContentType: data.contentType,
-      })
+      }),
     );
 
     // パブリックURLを返す
@@ -193,8 +200,11 @@ export const uploadImage = async (data: {
   } catch (error) {
     console.error("Failed to upload image - detailed error:", error);
     if (error instanceof Error) {
-      throw new Error(`画像のアップロードに失敗しました: ${error.message}`);
+      throw new InternalServerError(
+        `画像のアップロードに失敗しました: ${error.message}`,
+        error,
+      );
     }
-    throw new Error("画像のアップロードに失敗しました");
+    throw new InternalServerError("画像のアップロードに失敗しました", error);
   }
 };

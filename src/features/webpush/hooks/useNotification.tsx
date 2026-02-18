@@ -29,13 +29,13 @@ export function useNotification() {
   const [permission, setPermission] =
     useState<NotificationPermission>("default");
   const [subscription, setSubscription] = useState<PushSubscription | null>(
-    null
+    null,
   );
   const [subscriptionState, setSubscriptionState] = useState<SubscriptionState>(
     {
       isSubscribed: false,
       settings: null,
-    }
+    },
   );
 
   // 通知表示用
@@ -96,7 +96,7 @@ export function useNotification() {
 
       // 現在のエンドポイントに一致するサブスクリプションを検索
       const matchingSubscription = serverSubscriptions.find(
-        (sub) => sub.endpoint === browserSubscription.endpoint
+        sub => sub.endpoint === browserSubscription.endpoint,
       );
 
       if (!matchingSubscription) {
@@ -129,7 +129,7 @@ export function useNotification() {
    * 通知の有効/無効を切り替える
    */
   const toggleNotifications = async (
-    settings?: NotificationSettings
+    settings?: NotificationSettings,
   ): Promise<boolean> => {
     if (!isSupported || isProcessing) return false;
 
@@ -151,7 +151,7 @@ export function useNotification() {
 
         const subscriptionData = formatSubscriptionForApi(
           newSubscription,
-          settings
+          settings,
         );
         const response = await registerPushSubscription(subscriptionData);
 
@@ -181,7 +181,7 @@ export function useNotification() {
         // サーバーからサブスクリプション情報を取得して正しいIDを見つける
         const serverSubscriptions = await getNotificationSettings();
         const matchingSubscription = serverSubscriptions.find(
-          (sub) => sub.endpoint === subscription.endpoint
+          sub => sub.endpoint === subscription.endpoint,
         );
 
         if (!matchingSubscription) {
@@ -189,7 +189,7 @@ export function useNotification() {
         }
 
         const response = await unregisterPushSubscription(
-          matchingSubscription.id
+          matchingSubscription.id,
         );
 
         if (!response.success) {
@@ -232,7 +232,7 @@ export function useNotification() {
    * 通知設定を更新する
    */
   const updateSettings = async (
-    newSettings: Partial<NotificationSettings>
+    newSettings: Partial<NotificationSettings>,
   ): Promise<boolean> => {
     if (
       !isSupported ||
@@ -249,7 +249,7 @@ export function useNotification() {
       // サーバーからサブスクリプション情報を取得して正しいIDを見つける
       const serverSubscriptions = await getNotificationSettings();
       const matchingSubscription = serverSubscriptions.find(
-        (sub) => sub.endpoint === subscription.endpoint
+        sub => sub.endpoint === subscription.endpoint,
       );
 
       if (!matchingSubscription) {
@@ -263,7 +263,7 @@ export function useNotification() {
           new_articles: newSettings.newArticles,
           system_notices: newSettings.systemNotices,
           endpoint: "",
-        }
+        },
       );
 
       if (response.success) {
@@ -316,7 +316,7 @@ export function useNotification() {
    */
   const sendTestNotifications = async (
     title: string,
-    body: string
+    body: string,
   ): Promise<boolean> => {
     if (!isSupported || !subscriptionState.isSubscribed || isProcessing) {
       return false;
@@ -360,7 +360,7 @@ export function useNotification() {
   const showLocalNotification = async (
     title: string,
     body: string,
-    url?: string
+    url?: string,
   ): Promise<boolean> => {
     if (!isSupported || permission !== "granted" || isProcessing) {
       return false;
@@ -372,7 +372,7 @@ export function useNotification() {
       const success = await showLocalNotificationViaServiceWorker(
         title,
         body,
-        url
+        url,
       );
 
       if (success) {

@@ -11,6 +11,7 @@ import {
   Code,
   Container,
   Heading,
+  Input,
   Link,
   Text,
   VStack,
@@ -19,6 +20,8 @@ import {
 const LoginPage = (props: {
   searchParams: { callbackUrl: string | undefined };
 }) => {
+  const isDev = process.env.NODE_ENV !== "production";
+
   return (
     <Container centerContent py={16}>
       <Card variant="outline" w="full" maxW="2xl" shadow="lg" overflow="hidden">
@@ -71,6 +74,48 @@ const LoginPage = (props: {
               Microsoftアカウントでログイン
             </Button>
           </form>
+
+          {isDev && (
+            <>
+              <Alert status="info">
+                <AlertIcon />
+                <AlertDescription>
+                  開発環境用ログインです。`prisma/seed/data/test-users.json`
+                  で設定したテストアカウントのみ利用できます。
+                </AlertDescription>
+              </Alert>
+
+              <form
+                action={async formData => {
+                  "use server";
+                  const email = String(formData.get("email") ?? "");
+                  const password = String(formData.get("password") ?? "");
+
+                  await signIn("credentials", {
+                    email,
+                    password,
+                    redirectTo: props.searchParams.callbackUrl ?? "",
+                  });
+                }}
+              >
+                <VStack gap={3} align="stretch">
+                  <Input
+                    name="email"
+                    type="email"
+                    placeholder="テスト用メール"
+                  />
+                  <Input
+                    name="password"
+                    type="password"
+                    placeholder="パスワード"
+                  />
+                  <Button type="submit" w="full" variant="outline">
+                    開発環境用ログイン
+                  </Button>
+                </VStack>
+              </form>
+            </>
+          )}
 
           <Text fontSize="xs" color="gray.500" textAlign="center">
             ログインすることで、

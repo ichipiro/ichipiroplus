@@ -15,6 +15,7 @@ const WebappLayout = ({ children }: WebappLayoutProps) => {
       <MobileNav />
       <VStack
         w="full"
+        minW={0}
         h="full"
         gap={{ base: "lg", md: "sm" }}
         py={{ base: "lg", md: "sm" }}

@@ -51,7 +51,7 @@ const TaskColumn = ({
               onDelete={onDelete}
               registrationLabel={
                 task.registrationId
-                  ? registrationLabels?.[task.registrationId] ?? undefined
+                  ? (registrationLabels?.[task.registrationId] ?? undefined)
                   : undefined
               }
             />

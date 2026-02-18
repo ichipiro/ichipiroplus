@@ -65,7 +65,7 @@ export default async function AdminTermsPage() {
                     )}
                   </HStack>
                   <Text fontSize="sm" color="gray.600">
-                    {term.year}年度 第{term.number}ターム
+                    第{term.number}ターム
                   </Text>
                 </VStack>
 

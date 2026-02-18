@@ -1,7 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
+import {
+  type DevTestAccount,
+  getDevTestAccounts,
+} from "../../prisma/seed/test-users-data";
+
+const isDev = process.env.NODE_ENV !== "production";
+
+const parseDevAccounts = (): DevTestAccount[] => {
+  if (!isDev) return [];
+  return getDevTestAccounts();
+};
 
 export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   secret: process.env.AUTH_SECRET,
@@ -18,6 +30,51 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
       },
       allowDangerousEmailAccountLinking: true,
     }),
+    ...(isDev
+      ? [
+          Credentials({
+            name: "dev-credentials",
+            credentials: {
+              email: { label: "Email", type: "email" },
+              password: { label: "Password", type: "password" },
+            },
+            authorize: async credentials => {
+              const email = String(credentials?.email ?? "").toLowerCase();
+              const password = String(credentials?.password ?? "");
+
+              if (!email || !password) return null;
+
+              const devAccounts = parseDevAccounts();
+              const matched = devAccounts.find(
+                account =>
+                  account.email.toLowerCase() === email &&
+                  account.password === password,
+              );
+
+              if (!matched) return null;
+
+              const existingUser = await prisma.user.findUnique({
+                where: { email },
+              });
+              if (!existingUser) {
+                if (isDev) {
+                  console.warn(
+                    `[dev-auth] テストユーザーがDBに存在しません: ${email}. 先に npm run db:seed を実行してください。`,
+                  );
+                }
+                return null;
+              }
+
+              return {
+                id: existingUser.id,
+                email: existingUser.email,
+                name: existingUser.name,
+                image: existingUser.image,
+              };
+            },
+          }),
+        ]
+      : []),
   ],
   pages: {
     signIn: "/auth/login",
@@ -32,6 +89,10 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
           return false; // サインインを拒否
         }
 
+        return true;
+      }
+
+      if (account?.provider === "credentials" && isDev) {
         return true;
       }
 

@@ -40,7 +40,7 @@ const MyArticlesClient = ({
   const [optimisticArticles, setOptimisticArticles] = useOptimistic(
     initialArticles,
     (state: Article[], deleteId: string) =>
-      state.filter((article) => article.id !== deleteId)
+      state.filter(article => article.id !== deleteId),
   );
   const [isPending, startTransition] = useTransition();
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -84,7 +84,7 @@ const MyArticlesClient = ({
             </Tr>
           </Thead>
           <Tbody>
-            {optimisticArticles.map((article) => (
+            {optimisticArticles.map(article => (
               <Tr key={article.id}>
                 <Td>
                   <Link href={`/${profileId}/articles/${article.id}`}>

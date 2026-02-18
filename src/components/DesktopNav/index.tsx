@@ -16,6 +16,8 @@ const DesktopNav = () => {
       inset="md"
       h="calc(100vh - 32px)"
       w="sm"
+      minW="sm"
+      flexShrink={0}
       py={6}
       px={2}
       bg={["white", "black"]}

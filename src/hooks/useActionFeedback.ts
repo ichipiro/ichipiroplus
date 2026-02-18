@@ -1,4 +1,4 @@
-import { BadRequestError, HttpError } from "@/lib/errors";
+import { parseAppError } from "@/lib/errors";
 import { useNotice } from "@yamada-ui/react";
 
 const useActionFeedback = () => {
@@ -13,15 +13,22 @@ const useActionFeedback = () => {
   };
 
   const showError = (error: unknown, title = "エラー") => {
-    if (error instanceof HttpError) {
-      if (error instanceof BadRequestError) {
+    const parsed = parseAppError(error);
+    if (parsed) {
+      if (
+        parsed.code === "BAD_REQUEST" ||
+        parsed.code === "CONFLICT" ||
+        parsed.code === "NOT_FOUND" ||
+        parsed.code === "FORBIDDEN"
+      ) {
         notice({
           title,
-          description: error.message,
+          description: parsed.message,
           status: "warning",
         });
         return;
       }
+
       throw error;
     }
 

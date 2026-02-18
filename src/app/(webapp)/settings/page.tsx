@@ -36,7 +36,9 @@ const SettingsPage = async ({ searchParams }: SettingsPageProps) => {
       )}
       {tab === "account" && <AccountSettings />}
 
-      {tab === "display" && <DisplaySettings />}
+      {tab === "display" && (
+        <DisplaySettings isTimetablePublic={user.isTimetablePublic} />
+      )}
 
       {tab === "notification" && <NotificationSettings />}
     </>

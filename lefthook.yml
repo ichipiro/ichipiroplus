@@ -9,4 +9,4 @@ pre-commit:
   commands:
     biome:
       glob: "src/**/*.{js,ts,jsx,tsx}"
-      run: npm run check {staged_files}
+      run: biome check --write {staged_files}

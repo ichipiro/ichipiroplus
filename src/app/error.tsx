@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  BadRequestError,
-  NotFoundError,
-  UnauthorizedError,
-} from "@/lib/errors";
+import { parseAppError } from "@/lib/errors";
 import {
   Button,
   Card,
@@ -16,7 +12,7 @@ import {
   VStack,
 } from "@yamada-ui/react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 interface ErrorPageProps {
@@ -25,18 +21,27 @@ interface ErrorPageProps {
 }
 
 const ErrorPage = ({ error, reset }: ErrorPageProps) => {
+  const router = useRouter();
+  const parsedError = parseAppError(error);
+
   useEffect(() => {
     // エラーログ出力（開発時のデバッグ用）
     console.error("Error caught by error.tsx:", error);
   }, [error]);
 
   // 401 Unauthorized - ログインページへリダイレクト
-  if (error instanceof UnauthorizedError) {
-    redirect("/login");
+  useEffect(() => {
+    if (parsedError?.code === "UNAUTHORIZED") {
+      router.replace("/auth/login");
+    }
+  }, [parsedError?.code, router]);
+
+  if (parsedError?.code === "UNAUTHORIZED") {
+    return null;
   }
 
   // 404 Not Found - 専用ページ
-  if (error instanceof NotFoundError) {
+  if (parsedError?.code === "NOT_FOUND") {
     return (
       <Center minH="100vh" p={6}>
         <Card maxW="md" w="full">
@@ -50,7 +55,7 @@ const ErrorPage = ({ error, reset }: ErrorPageProps) => {
           </CardHeader>
           <CardBody textAlign="center">
             <Text color="gray.500" mb={6}>
-              {error.message}
+              {parsedError.message}
             </Text>
             <VStack>
               <Button colorScheme="blue">
@@ -67,7 +72,7 @@ const ErrorPage = ({ error, reset }: ErrorPageProps) => {
   }
 
   // 400 Bad Request - バリデーションエラー
-  if (error instanceof BadRequestError) {
+  if (parsedError?.code === "BAD_REQUEST") {
     return (
       <Center minH="100vh" p={6}>
         <Card maxW="md" w="full">
@@ -78,7 +83,7 @@ const ErrorPage = ({ error, reset }: ErrorPageProps) => {
           </CardHeader>
           <CardBody textAlign="center">
             <Text color="gray.600" mb={6}>
-              {error.message}
+              {parsedError.message}
             </Text>
             <VStack>
               <Button onClick={reset} colorScheme="orange">
@@ -108,7 +113,7 @@ const ErrorPage = ({ error, reset }: ErrorPageProps) => {
             申し訳ございません。予期しないエラーが発生しました。
             {process.env.NODE_ENV === "development" && (
               <Text mt={2} fontSize="sm" color="gray.500">
-                {error.message}
+                {parsedError?.message ?? error.message}
               </Text>
             )}
           </Text>

@@ -1,5 +1,12 @@
-import { Box, Tag } from "@yamada-ui/lucide";
-import { Avatar, HStack, Heading, Text, VStack } from "@yamada-ui/react";
+import {
+  Avatar,
+  Box,
+  HStack,
+  Heading,
+  Tag,
+  Text,
+  VStack,
+} from "@yamada-ui/react";
 import type { UserWithRelations } from "../types";
 
 interface ProfileHeaderProps {
