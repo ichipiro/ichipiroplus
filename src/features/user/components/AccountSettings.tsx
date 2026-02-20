@@ -60,13 +60,13 @@ const AccountSettings = () => {
           この操作は取り消すことができません。すべてのデータが完全に削除されます。
         </DialogBody>
         <DialogFooter gap={3}>
-          <Button ref={cancelRef} onClick={onClose} isDisabled={isDeleting}>
+          <Button ref={cancelRef} onClick={onClose} disabled={isDeleting}>
             キャンセル
           </Button>
           <Button
             colorScheme="danger"
             onClick={handleDeleteAccount}
-            isLoading={isDeleting}
+            loading={isDeleting}
             loadingText="削除中..."
           >
             削除する

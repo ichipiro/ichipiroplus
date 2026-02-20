@@ -5,11 +5,14 @@ import { Button, Flex, HStack, Heading } from "@yamada-ui/react";
 import Link from "next/link";
 
 interface ArticlesPageProps {
-  searchParams: { page?: string };
+  searchParams: Promise<{ page?: string }>;
 }
 
 const ArticlesPage = async ({ searchParams }: ArticlesPageProps) => {
-  const page = searchParams.page ? Number(searchParams.page) : 1;
+  const resolvedSearchParams = await searchParams;
+  const page = resolvedSearchParams.page
+    ? Number(resolvedSearchParams.page)
+    : 1;
   const articles = await getArticles(page);
 
   return (

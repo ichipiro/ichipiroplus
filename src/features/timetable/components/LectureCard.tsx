@@ -43,60 +43,58 @@ const LectureCard = ({ lecture, termId }: LectureCardProps) => {
   };
 
   return (
-    <>
-      <Card
-        border="1px solid"
-        borderColor="gray.300"
-        borderRadius="md"
-        bg={["white", "black"]}
-        w="full"
-      >
-        <CardHeader>
-          <HStack gap="sm">
-            <Tooltip label="シラバスID" placement="top">
-              <Tag variant="subtle" colorScheme="blue">
-                {lecture.syllabusCode || "シラバス無"}
-              </Tag>
-            </Tooltip>
-          </HStack>
+    <Card
+      border="1px solid"
+      borderColor="gray.300"
+      borderRadius="md"
+      bg={["white", "black"]}
+      w="full"
+    >
+      <CardHeader>
+        <HStack gap="sm">
+          <Tooltip label="シラバスID" placement="top">
+            <Tag variant="subtle" colorScheme="blue">
+              {lecture.syllabusCode || "シラバス無"}
+            </Tag>
+          </Tooltip>
+        </HStack>
+
+        <Spacer />
+      </CardHeader>
+      <CardBody>
+        <HStack w="full">
+          <VStack>
+            <Text fontSize="xl" fontWeight="bold">
+              {lecture.name}
+            </Text>
+
+            <Text lineClamp={1}>
+              <strong>担当教員:</strong>
+              {lecture.instructor}
+            </Text>
+            <Text>
+              <strong>教室:</strong> {lecture.room}
+            </Text>
+
+            <Text>
+              <strong>備考:</strong> {lecture.biko}
+            </Text>
+          </VStack>
 
           <Spacer />
-        </CardHeader>
-        <CardBody>
-          <HStack w="full">
-            <VStack>
-              <Text fontSize="xl" fontWeight="bold">
-                {lecture.name}
-              </Text>
 
-              <Text lineClamp={1}>
-                <strong>担当教員:</strong>
-                {lecture.instructor}
-              </Text>
-              <Text>
-                <strong>教室:</strong> {lecture.room}
-              </Text>
-
-              <Text>
-                <strong>備考:</strong> {lecture.biko}
-              </Text>
-            </VStack>
-
-            <Spacer />
-
-            {/* 既存の講義を登録 */}
-            <Button
-              alignSelf="end"
-              onClick={() => handleRegister(lecture.id)}
-              loading={isPending}
-              disabled={isPending}
-            >
-              登録
-            </Button>
-          </HStack>
-        </CardBody>
-      </Card>
-    </>
+          {/* 既存の講義を登録 */}
+          <Button
+            alignSelf="end"
+            onClick={() => handleRegister(lecture.id)}
+            loading={isPending}
+            disabled={isPending}
+          >
+            登録
+          </Button>
+        </HStack>
+      </CardBody>
+    </Card>
   );
 };
 

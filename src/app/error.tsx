@@ -12,7 +12,6 @@ import {
   VStack,
 } from "@yamada-ui/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 interface ErrorPageProps {
@@ -21,7 +20,6 @@ interface ErrorPageProps {
 }
 
 const ErrorPage = ({ error, reset }: ErrorPageProps) => {
-  const router = useRouter();
   const parsedError = parseAppError(error);
 
   useEffect(() => {
@@ -29,15 +27,32 @@ const ErrorPage = ({ error, reset }: ErrorPageProps) => {
     console.error("Error caught by error.tsx:", error);
   }, [error]);
 
-  // 401 Unauthorized - ログインページへリダイレクト
-  useEffect(() => {
-    if (parsedError?.code === "UNAUTHORIZED") {
-      router.replace("/auth/login");
-    }
-  }, [parsedError?.code, router]);
-
+  // 401 Unauthorized
   if (parsedError?.code === "UNAUTHORIZED") {
-    return null;
+    return (
+      <Center minH="100vh" p={6}>
+        <Card maxW="md" w="full">
+          <CardHeader textAlign="center">
+            <Heading size="xl" color="orange.500">
+              ログインが必要です
+            </Heading>
+          </CardHeader>
+          <CardBody textAlign="center">
+            <Text color="gray.600" mb={6}>
+              {parsedError.message}
+            </Text>
+            <VStack>
+              <Button as={Link} href="/auth/login" colorScheme="orange">
+                ログイン画面へ
+              </Button>
+              <Button variant="ghost" onClick={reset}>
+                再試行
+              </Button>
+            </VStack>
+          </CardBody>
+        </Card>
+      </Center>
+    );
   }
 
   // 404 Not Found - 専用ページ

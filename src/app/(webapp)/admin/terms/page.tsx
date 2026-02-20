@@ -26,8 +26,10 @@ export const metadata: Metadata = {
 export default async function AdminTermsPage() {
   await checkAdminAccess();
 
-  const terms = await getTerms();
-  const currentTerm = await getCurrentTerm();
+  const [terms, currentTerm] = await Promise.all([
+    getTerms(),
+    getCurrentTerm(),
+  ]);
 
   const handleDelete = async (formData: FormData) => {
     "use server";

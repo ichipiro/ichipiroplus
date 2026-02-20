@@ -21,21 +21,22 @@ import {
   Text,
   VStack,
 } from "@yamada-ui/react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 interface ProfilePageProps {
-  params: {
+  params: Promise<{
     username: string;
-  };
-  searchParams?: {
+  }>;
+  searchParams?: Promise<{
     tab?: string;
     termId?: string;
-  };
+  }>;
 }
 
 const ProfilePage = async ({ params, searchParams }: ProfilePageProps) => {
-  const { username } = params;
+  const { username } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const [profileData, currentUser, terms, currentTerm] = await Promise.all([
     getUserByUsername(username),
     getCurrentUserOptional(),
@@ -48,9 +49,11 @@ const ProfilePage = async ({ params, searchParams }: ProfilePageProps) => {
   }
 
   const activeTab =
-    searchParams?.tab === "timetable" ? "timetable" : "articles";
-  const selectedTermId = terms.some(term => term.id === searchParams?.termId)
-    ? String(searchParams?.termId)
+    resolvedSearchParams?.tab === "timetable" ? "timetable" : "articles";
+  const selectedTermId = terms.some(
+    term => term.id === resolvedSearchParams?.termId,
+  )
+    ? String(resolvedSearchParams?.termId)
     : currentTerm.id;
 
   const isOwner = currentUser?.id === profileData.id;
@@ -88,14 +91,14 @@ const ProfilePage = async ({ params, searchParams }: ProfilePageProps) => {
             <Heading size="md">コンテンツ</Heading>
             <ButtonGroup attached variant="outline">
               <Button
-                as={Link}
+                as="a"
                 href={buildTabHref("articles")}
                 colorScheme={activeTab === "articles" ? "blue" : "gray"}
               >
                 記事
               </Button>
               <Button
-                as={Link}
+                as="a"
                 href={buildTabHref("timetable")}
                 colorScheme={activeTab === "timetable" ? "blue" : "gray"}
               >
@@ -121,10 +124,18 @@ const ProfilePage = async ({ params, searchParams }: ProfilePageProps) => {
 
           {activeTab === "timetable" && (
             <VStack align="stretch" gap={4}>
-              <UserTimetablePicker
-                terms={terms.map(term => ({ id: term.id, name: term.name }))}
-                selectedTermId={selectedTermId}
-              />
+              <Suspense
+                fallback={
+                  <Text fontSize="sm" color="gray.600">
+                    タームを読み込み中...
+                  </Text>
+                }
+              >
+                <UserTimetablePicker
+                  terms={terms.map(term => ({ id: term.id, name: term.name }))}
+                  selectedTermId={selectedTermId}
+                />
+              </Suspense>
 
               {!isOwner && canViewTimetable && (
                 <CopyTimetableButton

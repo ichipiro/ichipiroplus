@@ -56,6 +56,7 @@ const MyProfileEditForm = ({
       facultyId: user.facultyId || undefined,
       departmentId: user.departmentId || undefined,
       grade: user.grade || 1,
+      image: user.image || null,
     },
   });
 
@@ -88,7 +89,10 @@ const MyProfileEditForm = ({
       const result = await withFeedback(
         updateUser({
           ...parsedData.data,
-          image: parsedData.data.image || undefined,
+          image:
+            parsedData.data.image === undefined
+              ? undefined
+              : parsedData.data.image,
         }),
         {
           successMessage: "プロフィールが更新されました",

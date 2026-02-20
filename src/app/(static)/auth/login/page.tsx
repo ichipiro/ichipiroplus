@@ -17,10 +17,11 @@ import {
   VStack,
 } from "@yamada-ui/react";
 
-const LoginPage = (props: {
-  searchParams: { callbackUrl: string | undefined };
+const LoginPage = async (props: {
+  searchParams: Promise<{ callbackUrl?: string }>;
 }) => {
   const isDev = process.env.NODE_ENV !== "production";
+  const searchParams = await props.searchParams;
 
   return (
     <Container centerContent py={16}>
@@ -66,7 +67,7 @@ const LoginPage = (props: {
             action={async () => {
               "use server";
               await signIn("microsoft-entra-id", {
-                redirectTo: props.searchParams.callbackUrl ?? "",
+                redirectTo: searchParams.callbackUrl ?? "",
               });
             }}
           >
@@ -94,7 +95,7 @@ const LoginPage = (props: {
                   await signIn("credentials", {
                     email,
                     password,
-                    redirectTo: props.searchParams.callbackUrl ?? "",
+                    redirectTo: searchParams.callbackUrl ?? "",
                   });
                 }}
               >

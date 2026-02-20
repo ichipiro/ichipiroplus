@@ -63,7 +63,7 @@ export default async function AdminDashboard() {
         <Card>
           <CardBody>
             <HStack mb={2}>
-              <UsersIcon font-size="sm" />
+              <UsersIcon fontSize="sm" />
               <Text fontSize="sm" fontWeight="bold">
                 ユーザー数
               </Text>
@@ -80,7 +80,7 @@ export default async function AdminDashboard() {
         <Card>
           <CardBody>
             <HStack mb={2}>
-              <CalendarIcon font-size="sm" />
+              <CalendarIcon fontSize="sm" />
               <Text fontSize="sm" fontWeight="bold">
                 講義数
               </Text>
@@ -97,7 +97,7 @@ export default async function AdminDashboard() {
         <Card>
           <CardBody>
             <HStack mb={2}>
-              <FileJsonIcon font-size="sm" />
+              <FileJsonIcon fontSize="sm" />
               <Text fontSize="sm" fontWeight="bold">
                 タスク数
               </Text>

@@ -1,8 +1,7 @@
 "use client";
 
 import { createLecture } from "@/features/timetable/actions";
-import { DAYS, TIMES } from "@/features/timetable/constant";
-import { getScheduleKey } from "@/features/timetable/utils";
+import { SCHEDULE_OPTIONS } from "@/features/timetable/utils";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import {
   Alert,
@@ -22,27 +21,80 @@ import {
   Wrap,
 } from "@yamada-ui/react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useReducer, useTransition } from "react";
 
 interface CreateLectureFormProps {
   termOptions: { number: number; name: string }[];
   defaultTermNumber: number;
 }
 
-const DAY_LABELS: Record<number, string> = {
-  1: "月",
-  2: "火",
-  3: "水",
-  4: "木",
-  5: "金",
+type FormState = {
+  name: string;
+  instructor: string;
+  room: string;
+  biko: string;
+  selectedTermNumbers: number[];
+  selectedScheduleIds: number[];
+  isPublic: boolean;
+  isPublicEditable: boolean;
 };
 
-const SCHEDULE_OPTIONS = DAYS.flatMap(day =>
-  TIMES.map(time => ({
-    id: getScheduleKey(day, time),
-    label: `${DAY_LABELS[day]}曜${time}限`,
-  })),
-);
+type FormAction =
+  | {
+      type: "setField";
+      field: "name" | "instructor" | "room" | "biko";
+      value: string;
+    }
+  | { type: "toggleTermNumber"; termNumber: number }
+  | { type: "toggleScheduleId"; scheduleId: number }
+  | { type: "toggleIsPublic" }
+  | { type: "toggleIsPublicEditable" };
+
+const createInitialFormState = (defaultTermNumber: number): FormState => ({
+  name: "",
+  instructor: "",
+  room: "",
+  biko: "",
+  selectedTermNumbers: [defaultTermNumber],
+  selectedScheduleIds: [],
+  isPublic: true,
+  isPublicEditable: false,
+});
+
+const formReducer = (state: FormState, action: FormAction): FormState => {
+  switch (action.type) {
+    case "setField":
+      return { ...state, [action.field]: action.value };
+    case "toggleTermNumber":
+      return {
+        ...state,
+        selectedTermNumbers: state.selectedTermNumbers.includes(
+          action.termNumber,
+        )
+          ? state.selectedTermNumbers.filter(
+              value => value !== action.termNumber,
+            )
+          : [...state.selectedTermNumbers, action.termNumber],
+      };
+    case "toggleScheduleId":
+      return {
+        ...state,
+        selectedScheduleIds: state.selectedScheduleIds.includes(
+          action.scheduleId,
+        )
+          ? state.selectedScheduleIds.filter(
+              value => value !== action.scheduleId,
+            )
+          : [...state.selectedScheduleIds, action.scheduleId],
+      };
+    case "toggleIsPublic":
+      return { ...state, isPublic: !state.isPublic };
+    case "toggleIsPublicEditable":
+      return { ...state, isPublicEditable: !state.isPublicEditable };
+    default:
+      return state;
+  }
+};
 
 const CreateLectureForm = ({
   termOptions,
@@ -52,38 +104,17 @@ const CreateLectureForm = ({
   const { withFeedback } = useActionFeedback();
   const [isPending, startTransition] = useTransition();
 
-  const [name, setName] = useState("");
-  const [instructor, setInstructor] = useState("");
-  const [room, setRoom] = useState("");
-  const [biko, setBiko] = useState("");
-  const [selectedTermNumbers, setSelectedTermNumbers] = useState<number[]>([
+  const [state, dispatch] = useReducer(
+    formReducer,
     defaultTermNumber,
-  ]);
-  const [selectedScheduleIds, setSelectedScheduleIds] = useState<number[]>([]);
-  const [isPublic, setIsPublic] = useState(true);
-  const [isPublicEditable, setIsPublicEditable] = useState(false);
-
-  const toggleTermNumber = (termNumber: number) => {
-    setSelectedTermNumbers(prev =>
-      prev.includes(termNumber)
-        ? prev.filter(value => value !== termNumber)
-        : [...prev, termNumber],
-    );
-  };
-
-  const toggleScheduleId = (scheduleId: number) => {
-    setSelectedScheduleIds(prev =>
-      prev.includes(scheduleId)
-        ? prev.filter(value => value !== scheduleId)
-        : [...prev, scheduleId],
-    );
-  };
+    createInitialFormState,
+  );
 
   const handleSubmit = () => {
     if (
-      !name.trim() ||
-      selectedTermNumbers.length === 0 ||
-      selectedScheduleIds.length === 0
+      !state.name.trim() ||
+      state.selectedTermNumbers.length === 0 ||
+      state.selectedScheduleIds.length === 0
     ) {
       return;
     }
@@ -91,14 +122,14 @@ const CreateLectureForm = ({
     startTransition(async () => {
       const created = await withFeedback(
         createLecture({
-          name: name.trim(),
-          instructor: instructor.trim() || null,
-          room: room.trim() || null,
-          biko: biko.trim() || null,
-          termNumbers: selectedTermNumbers,
-          scheduleIds: selectedScheduleIds,
-          isPublic,
-          isPublicEditable,
+          name: state.name.trim(),
+          instructor: state.instructor.trim() || null,
+          room: state.room.trim() || null,
+          biko: state.biko.trim() || null,
+          termNumbers: state.selectedTermNumbers,
+          scheduleIds: state.selectedScheduleIds,
+          isPublic: state.isPublic,
+          isPublicEditable: state.isPublicEditable,
         }),
         {
           successTitle: "講義追加",
@@ -132,8 +163,14 @@ const CreateLectureForm = ({
         <VStack align="stretch" gap={4}>
           <FormControl label="講義名" required>
             <Input
-              value={name}
-              onChange={e => setName(e.target.value)}
+              value={state.name}
+              onChange={e =>
+                dispatch({
+                  type: "setField",
+                  field: "name",
+                  value: e.target.value,
+                })
+              }
               placeholder="例: 応用統計学 / サークル活動"
             />
           </FormControl>
@@ -141,16 +178,28 @@ const CreateLectureForm = ({
           <HStack align="start" gap={4} flexWrap="wrap">
             <FormControl label="担当" w={{ base: "full", md: "48%" }}>
               <Input
-                value={instructor}
-                onChange={e => setInstructor(e.target.value)}
+                value={state.instructor}
+                onChange={e =>
+                  dispatch({
+                    type: "setField",
+                    field: "instructor",
+                    value: e.target.value,
+                  })
+                }
                 placeholder="例: 山田太郎"
               />
             </FormControl>
 
             <FormControl label="教室・場所" w={{ base: "full", md: "48%" }}>
               <Input
-                value={room}
-                onChange={e => setRoom(e.target.value)}
+                value={state.room}
+                onChange={e =>
+                  dispatch({
+                    type: "setField",
+                    field: "room",
+                    value: e.target.value,
+                  })
+                }
                 placeholder="例: A101 / 部室"
               />
             </FormControl>
@@ -159,12 +208,17 @@ const CreateLectureForm = ({
           <FormControl label="ターム" required>
             <Wrap>
               {termOptions.map(term => {
-                const checked = selectedTermNumbers.includes(term.number);
+                const checked = state.selectedTermNumbers.includes(term.number);
                 return (
                   <Checkbox
                     key={term.number}
-                    isChecked={checked}
-                    onChange={() => toggleTermNumber(term.number)}
+                    checked={checked}
+                    onChange={() =>
+                      dispatch({
+                        type: "toggleTermNumber",
+                        termNumber: term.number,
+                      })
+                    }
                   >
                     {term.name}
                   </Checkbox>
@@ -176,12 +230,17 @@ const CreateLectureForm = ({
           <FormControl label="開講時期（曜日・時限）" required>
             <Wrap>
               {SCHEDULE_OPTIONS.map(schedule => {
-                const checked = selectedScheduleIds.includes(schedule.id);
+                const checked = state.selectedScheduleIds.includes(schedule.id);
                 return (
                   <Checkbox
                     key={schedule.id}
-                    isChecked={checked}
-                    onChange={() => toggleScheduleId(schedule.id)}
+                    checked={checked}
+                    onChange={() =>
+                      dispatch({
+                        type: "toggleScheduleId",
+                        scheduleId: schedule.id,
+                      })
+                    }
                   >
                     {schedule.label}
                   </Checkbox>
@@ -192,8 +251,14 @@ const CreateLectureForm = ({
 
           <FormControl label="備考">
             <Textarea
-              value={biko}
-              onChange={e => setBiko(e.target.value)}
+              value={state.biko}
+              onChange={e =>
+                dispatch({
+                  type: "setField",
+                  field: "biko",
+                  value: e.target.value,
+                })
+              }
               placeholder="補足情報があれば入力してください"
               minH="120px"
             />
@@ -201,14 +266,14 @@ const CreateLectureForm = ({
 
           <VStack align="stretch" gap={3} pt={2}>
             <Switch
-              isChecked={isPublic}
-              onChange={() => setIsPublic(prev => !prev)}
+              checked={state.isPublic}
+              onChange={() => dispatch({ type: "toggleIsPublic" })}
             >
               公開する（他ユーザーに表示可能）
             </Switch>
             <Switch
-              isChecked={isPublicEditable}
-              onChange={() => setIsPublicEditable(prev => !prev)}
+              checked={state.isPublicEditable}
+              onChange={() => dispatch({ type: "toggleIsPublicEditable" })}
             >
               他ユーザーの編集を許可する
             </Switch>
@@ -222,10 +287,10 @@ const CreateLectureForm = ({
               colorScheme="blue"
               onClick={handleSubmit}
               loading={isPending}
-              isDisabled={
-                !name.trim() ||
-                selectedTermNumbers.length === 0 ||
-                selectedScheduleIds.length === 0
+              disabled={
+                !state.name.trim() ||
+                state.selectedTermNumbers.length === 0 ||
+                state.selectedScheduleIds.length === 0
               }
             >
               講義を追加

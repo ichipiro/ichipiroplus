@@ -1,7 +1,7 @@
 "use client";
 
 import { HStack, Option, Select, Text } from "@yamada-ui/react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type UserTimetablePickerProps = {
   terms: { id: string; name: string }[];
@@ -14,10 +14,9 @@ const UserTimetablePicker = ({
 }: UserTimetablePickerProps) => {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const handleChange = (nextTermId: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams();
     params.set("tab", "timetable");
     params.set("termId", nextTermId);
     router.push(`${pathname}?${params.toString()}`);

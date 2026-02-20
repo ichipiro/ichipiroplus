@@ -6,22 +6,24 @@ import LectureList from "@/features/timetable/components/LectureList";
 import { getDayTimeByScheduleKey } from "@/features/timetable/utils";
 
 interface TimeSlotPageProps {
-  params: {
+  params: Promise<{
     termId: string;
     dayTime: string;
-  };
+  }>;
 
-  searchParams: {
+  searchParams: Promise<{
     tab?: string;
-  };
+  }>;
 }
 
 const TimeSlotPage = async ({ params, searchParams }: TimeSlotPageProps) => {
-  const dayTime = Number.parseInt(params.dayTime);
-  const tab = searchParams.tab || "attendance";
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const dayTime = Number.parseInt(resolvedParams.dayTime, 10);
+  const tab = resolvedSearchParams.tab || "attendance";
   const { day, time } = getDayTimeByScheduleKey(dayTime);
 
-  const term = await getTerm(params.termId);
+  const term = await getTerm(resolvedParams.termId);
 
   const registration = await getRegistrationsBySchedule(dayTime, term.id);
   if (registration) {

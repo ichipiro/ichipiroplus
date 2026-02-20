@@ -4,14 +4,14 @@ import { getCurrentUser } from "@/features/user/actions";
 import { notFound } from "next/navigation";
 
 interface ArticleEditPageProps {
-  params: {
+  params: Promise<{
     username: string;
     slug: string;
-  };
+  }>;
 }
 
 const ArticleEditPage = async ({ params }: ArticleEditPageProps) => {
-  const { username, slug } = params;
+  const { username, slug } = await params;
 
   const userProfile = await getCurrentUser();
 

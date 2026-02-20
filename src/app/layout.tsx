@@ -1,6 +1,5 @@
 import Header from "@/components/Header";
 import "@/features/editor/styles/tiptap.css";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Center, VStack } from "@yamada-ui/react";
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP } from "next/font/google";
@@ -41,14 +40,13 @@ export const metadata: Metadata = {
 
 const RootLayout = ({ children }: { children: ReactNode }) => {
   return (
-    <html lang="ja">
-      <body className={notoSansJP.className}>
+    <html lang="ja" suppressHydrationWarning>
+      <body className={notoSansJP.className} suppressHydrationWarning>
         <YamadaUIProvider>
           <Center>
             <VStack maxW="9xl" fontSize={{ base: "md", md: "sm" }}>
               <Header />
               {children}
-              <SpeedInsights />
               <Footer />
             </VStack>
           </Center>

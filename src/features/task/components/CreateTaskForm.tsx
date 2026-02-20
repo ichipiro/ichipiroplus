@@ -2,8 +2,6 @@
 
 import {
   type TaskFormData,
-  TaskPriority,
-  type TaskPriorityType,
   TaskStatus,
   taskFormSchema,
 } from "@/features/task/types";
@@ -15,8 +13,6 @@ import {
   Button,
   FormControl,
   Input,
-  Radio,
-  RadioGroup,
   Select,
   type SelectItem,
   Tag,
@@ -55,8 +51,7 @@ const CreateTaskForm = ({
       title: "",
       description: "",
       registrationId: defaultRegistrationId,
-      priority: TaskPriority.LOW,
-      status: TaskStatus.TODO,
+      status: TaskStatus.INCOMPLETE,
     },
   });
 
@@ -70,7 +65,6 @@ const CreateTaskForm = ({
       onCreate({
         title: data.title,
         description: data.description,
-        priority: data.priority as TaskPriorityType,
         dueDate: data.dueDate || undefined,
         registrationId,
       }),
@@ -147,25 +141,6 @@ const CreateTaskForm = ({
                 value={field.value || undefined}
                 onChange={value => field.onChange(value)}
               />
-            )}
-          />
-        </FormControl>
-
-        <FormControl label="優先度" invalid={!!errors.priority}>
-          <Controller
-            name="priority"
-            control={control}
-            render={({ field }) => (
-              <RadioGroup
-                direction="row"
-                {...field}
-                value={String(field.value)}
-                onChange={value => field.onChange(Number(value))}
-              >
-                <Radio value={String(TaskPriority.LOW)}>低</Radio>
-                <Radio value={String(TaskPriority.MEDIUM)}>中</Radio>
-                <Radio value={String(TaskPriority.HIGH)}>高</Radio>
-              </RadioGroup>
             )}
           />
         </FormControl>

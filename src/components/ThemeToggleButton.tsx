@@ -10,7 +10,7 @@ export const ThemeToggleButton = () => {
     <HStack gap={2}>
       <SunIcon size="1.25em" />
       <Switch
-        isChecked={colorMode === "dark"}
+        checked={colorMode === "dark"}
         onChange={toggleColorMode}
         colorScheme="primary"
       />

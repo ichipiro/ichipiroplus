@@ -1,66 +1,131 @@
 "use client";
 
 import useActionFeedback from "@/hooks/useActionFeedback";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  type DragEndEvent,
+  type DragStartEvent,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@prisma/client";
 import { PlusIcon } from "@yamada-ui/lucide";
 import {
+  Accordion,
+  AccordionItem,
+  AccordionPanel,
   Box,
   Button,
+  HStack,
   type SelectItem,
+  Text,
   VStack,
-  useDisclosure,
 } from "@yamada-ui/react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import {
-  createTask as createTaskAction,
-  deleteCompletedTasks as deleteCompletedTasksAction,
-  deleteTask as deleteTaskAction,
-  updateTask as updateTaskAction,
-  updateTaskStatus as updateTaskStatusAction,
-} from "../actions";
-import {
-  type TaskFormData,
-  type TaskPriorityType,
-  TaskStatus,
-  type TaskStatusType,
-} from "../types";
-import CreateTaskForm from "./CreateTaskForm";
-import DeleteCompletedTasksDialog from "./DeleteCompletedTasksDialog";
-import DeleteTaskDialog from "./DeleteTaskDialog";
-import EditTaskModal from "./EditTaskModal";
-import TaskColumn from "./TaskColumn";
+import { useMemo, useState } from "react";
+import { useTaskBoard } from "../hooks/useTaskBoard";
+import { type TaskStatusType, TaskStatus } from "../types";
+import TaskItem from "./TaskItem";
 
 interface TasksDashboardProps {
   initialTasks: Task[];
   lectureItems?: SelectItem[];
   registrationId?: string;
+  fixedRegistrationLabel?: string;
 }
+
+type SortableTaskItemProps = {
+  task: Task;
+  isPending: boolean;
+  lectureItems?: SelectItem[];
+  registrationLabel?: string;
+  autoEdit?: boolean;
+  onAutoEditConsumed?: () => void;
+  onUpdate: (
+    taskId: string,
+    data: {
+      title?: string;
+      description?: string;
+      dueDate?: Date;
+      registrationId?: string;
+    },
+  ) => Promise<Task>;
+  onToggleCompleted: (taskId: string) => Promise<Task | null>;
+  onDelete: (taskId: string) => Promise<void>;
+};
+
+const SortableTaskItem = ({ task, ...props }: SortableTaskItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id, data: { status: task.status } });
+
+  return (
+    <Box
+      ref={setNodeRef}
+      transform={CSS.Transform.toString(transform)}
+      transition={transition}
+      opacity={isDragging ? 0.5 : 1}
+      touchAction="none"
+      {...attributes}
+      {...listeners}
+    >
+      <TaskItem task={task} {...props} />
+    </Box>
+  );
+};
 
 const TasksDashboard = ({
   initialTasks,
   lectureItems,
   registrationId,
+  fixedRegistrationLabel,
 }: TasksDashboardProps) => {
-  const { open, onToggle } = useDisclosure();
   const { withFeedback } = useActionFeedback();
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [autoEditTaskId, setAutoEditTaskId] = useState<string | null>(null);
 
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [isPending, setIsPending] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [modals, setModals] = useState({
-    edit: false,
-    delete: false,
-    deleteCompleted: false,
+  const {
+    isPending,
+    incompleteTasks,
+    completedTasks,
+    completedTasksCount,
+    handleCreateTask,
+    handleUpdateTask,
+    handleToggleTaskCompletion,
+    handleReorderTasks,
+    handleDeleteTask,
+    handleDeleteCompletedTasks,
+  } = useTaskBoard({
+    initialTasks,
+    registrationId,
   });
 
-  useEffect(() => {
-    setTasks(initialTasks);
-  }, [initialTasks]);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+  );
 
   const registrationLabels = useMemo(() => {
-    if (!lectureItems) return {} as Record<string, ReactNode>;
+    if (!lectureItems) return {} as Record<string, string>;
 
-    const map: Record<string, ReactNode> = {};
+    const map: Record<string, string> = {};
 
     const assignLabels = (items: SelectItem[]) => {
       for (const item of items) {
@@ -70,7 +135,11 @@ const TasksDashboard = ({
         }
 
         if ("value" in item && typeof item.value === "string") {
-          map[item.value] = item.label;
+          if (typeof item.label === "string") {
+            map[item.value] = item.label;
+          } else if (typeof item.label === "number") {
+            map[item.value] = String(item.label);
+          }
         }
       }
     };
@@ -80,231 +149,219 @@ const TasksDashboard = ({
     return map;
   }, [lectureItems]);
 
-  const runWithPending = async <T,>(action: () => Promise<T>): Promise<T> => {
-    setIsPending(true);
-    try {
-      return await action();
-    } finally {
-      setIsPending(false);
+  const getRegistrationLabel = (task: Task) => {
+    if (!task.registrationId) return undefined;
+
+    if (fixedRegistrationLabel && registrationId === task.registrationId) {
+      return fixedRegistrationLabel;
+    }
+
+    return registrationLabels[task.registrationId] ?? "講義";
+  };
+
+  const allTasks = useMemo(
+    () => [...incompleteTasks, ...completedTasks],
+    [incompleteTasks, completedTasks],
+  );
+
+  const activeTask = useMemo(
+    () => allTasks.find(task => task.id === activeTaskId) ?? null,
+    [allTasks, activeTaskId],
+  );
+
+  const handleQuickCreate = async () => {
+    if (isPending) return;
+
+    const created = await withFeedback(
+      handleCreateTask({
+        title: "新しいタスク",
+        description: "",
+        dueDate: undefined,
+        registrationId,
+      }),
+      {
+        successMessage: "新しいタスクを追加しました",
+        successTitle: "タスク追加",
+      },
+    );
+
+    if (created) {
+      setAutoEditTaskId(created.id);
     }
   };
 
-  const todoTasks = useMemo(
-    () => tasks.filter(task => task.status === TaskStatus.TODO),
-    [tasks],
-  );
-  const inProgressTasks = useMemo(
-    () => tasks.filter(task => task.status === TaskStatus.IN_PROGRESS),
-    [tasks],
-  );
-  const completedTasks = useMemo(
-    () => tasks.filter(task => task.status === TaskStatus.DONE),
-    [tasks],
-  );
-
-  const handleCreateTask = async (
-    data: Omit<TaskFormData, "status">,
-  ): Promise<Task> =>
-    runWithPending(async () => {
-      const resolvedRegistrationId =
-        data.registrationId === undefined
-          ? registrationId
-          : data.registrationId || undefined;
-      const newTask = await createTaskAction({
-        title: data.title,
-        description: data.description,
-        priority: data.priority as TaskPriorityType,
-        dueDate: data.dueDate || undefined,
-        registrationId: resolvedRegistrationId,
-      });
-      setTasks(prev => [...prev, newTask]);
-      return newTask;
-    });
-
-  const handleUpdateTask = async (
-    taskId: string,
-    data: Partial<TaskFormData>,
-  ): Promise<Task> =>
-    runWithPending(async () => {
-      const updatedTask = await updateTaskAction(taskId, {
-        title: data.title,
-        description: data.description,
-        priority: data.priority as TaskPriorityType | undefined,
-        status: data.status as TaskStatusType | undefined,
-        dueDate: data.dueDate || undefined,
-        registrationId:
-          data.registrationId === undefined
-            ? undefined
-            : data.registrationId || undefined,
-      });
-
-      setTasks(prev =>
-        prev.map(task => (task.id === taskId ? updatedTask : task)),
-      );
-      setSelectedTask(updatedTask);
-      return updatedTask;
-    });
-
-  const handleUpdateTaskStatus = async (
-    taskId: string,
-    status: TaskStatusType,
-  ): Promise<Task> =>
-    runWithPending(async () => {
-      const updatedTask = await updateTaskStatusAction(taskId, status);
-      setTasks(prev =>
-        prev.map(task => (task.id === taskId ? updatedTask : task)),
-      );
-      if (selectedTask && selectedTask.id === taskId) {
-        setSelectedTask(updatedTask);
-      }
-      return updatedTask;
-    });
-
-  const handleDeleteTask = async (taskId: string): Promise<void> =>
-    runWithPending(async () => {
-      await deleteTaskAction(taskId);
-      setTasks(prev => prev.filter(task => task.id !== taskId));
-      if (selectedTask && selectedTask.id === taskId) {
-        setSelectedTask(null);
-      }
-    });
-
-  const handleDeleteCompletedTasks = async (): Promise<number> =>
-    runWithPending(async () => {
-      const deletedCount = await deleteCompletedTasksAction();
-      setTasks(prev => prev.filter(task => task.status !== TaskStatus.DONE));
-      return deletedCount;
-    });
-
-  const openEditModal = (task: Task) => {
-    setSelectedTask(task);
-    setModals(prev => ({ ...prev, edit: true }));
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveTaskId(String(event.active.id));
   };
 
-  const openDeleteDialog = (task: Task) => {
-    setSelectedTask(task);
-    setModals(prev => ({ ...prev, delete: true }));
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveTaskId(null);
 
-  const openDeleteCompletedDialog = () => {
-    setModals(prev => ({ ...prev, deleteCompleted: true }));
-  };
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-  const closeModal = (modal: keyof typeof modals) => {
-    setModals(prev => ({ ...prev, [modal]: false }));
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    const activeTask = allTasks.find(task => task.id === activeId);
+    const overTask = allTasks.find(task => task.id === overId);
+
+    if (!activeTask || !overTask || activeTask.status !== overTask.status) {
+      return;
+    }
+
+    const status = activeTask.status as TaskStatusType;
+    const currentTasks =
+      status === TaskStatus.INCOMPLETE ? incompleteTasks : completedTasks;
+
+    const oldIndex = currentTasks.findIndex(task => task.id === activeId);
+    const newIndex = currentTasks.findIndex(task => task.id === overId);
+
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+
+    const orderedTasks = arrayMove(currentTasks, oldIndex, newIndex);
+    const orderedTaskIds = orderedTasks.map(task => task.id);
+
+    await handleReorderTasks(status, orderedTaskIds);
   };
 
   return (
-    <Box w="full">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <Box w="full">
-        <Button
-          leftIcon={<PlusIcon />}
-          onClick={onToggle}
-          colorScheme="blue"
-          size="sm"
-          mb={4}
-        >
-          {open ? "キャンセル" : "タスクを追加"}
-        </Button>
+        <Box w="full" mb={4}>
+          <Button
+            leftIcon={<PlusIcon />}
+            onClick={handleQuickCreate}
+            colorScheme="blue"
+            size="sm"
+            disabled={isPending}
+          >
+            タスクを追加
+          </Button>
+        </Box>
 
-        {open && (
-          <CreateTaskForm
-            lectureItems={lectureItems}
-            defaultRegistrationId={registrationId}
-            onCreate={handleCreateTask}
-            onSuccess={() => onToggle()}
-            isPending={isPending}
-          />
-        )}
+        <VStack align="stretch" gap={4}>
+          <Box>
+            {incompleteTasks.length === 0 ? (
+              <Box
+                py={8}
+                textAlign="center"
+                borderWidth="1px"
+                borderRadius="md"
+              >
+                <Text color="gray.500">未完了のタスクはありません</Text>
+              </Box>
+            ) : (
+              <SortableContext
+                items={incompleteTasks.map(task => task.id)}
+                strategy={rectSortingStrategy}
+              >
+                <VStack align="stretch" gap={3}>
+                  {incompleteTasks.map(task => (
+                    <SortableTaskItem
+                      key={task.id}
+                      task={task}
+                      isPending={isPending}
+                      lectureItems={lectureItems}
+                      autoEdit={autoEditTaskId === task.id}
+                      onAutoEditConsumed={() => setAutoEditTaskId(null)}
+                      onUpdate={handleUpdateTask}
+                      onToggleCompleted={handleToggleTaskCompletion}
+                      onDelete={handleDeleteTask}
+                      registrationLabel={getRegistrationLabel(task)}
+                    />
+                  ))}
+                </VStack>
+              </SortableContext>
+            )}
+          </Box>
+
+          <Accordion toggle variant="unstyled" w="full">
+            <AccordionItem
+              label={
+                <Text fontWeight="bold">完了済み ({completedTasksCount})</Text>
+              }
+            >
+              <AccordionPanel px={0}>
+                {completedTasksCount > 0 && (
+                  <HStack justify="flex-end" mb={2}>
+                    <Button
+                      size="xs"
+                      colorScheme="red"
+                      variant="outline"
+                      onClick={async () => {
+                        await withFeedback(handleDeleteCompletedTasks(), {
+                          successMessage: count =>
+                            `${count}件の完了タスクを削除しました`,
+                          successTitle: "一括削除",
+                        });
+                      }}
+                      disabled={isPending}
+                    >
+                      すべて削除
+                    </Button>
+                  </HStack>
+                )}
+
+                {completedTasks.length === 0 ? (
+                  <Box
+                    py={4}
+                    textAlign="center"
+                    borderWidth="1px"
+                    borderRadius="md"
+                  >
+                    <Text color="gray.500">完了済みタスクはありません</Text>
+                  </Box>
+                ) : (
+                  <SortableContext
+                    items={completedTasks.map(task => task.id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    <VStack align="stretch" gap={3}>
+                      {completedTasks.map(task => (
+                        <SortableTaskItem
+                          key={task.id}
+                          task={task}
+                          isPending={isPending}
+                          lectureItems={lectureItems}
+                          autoEdit={autoEditTaskId === task.id}
+                          onAutoEditConsumed={() => setAutoEditTaskId(null)}
+                          onUpdate={handleUpdateTask}
+                          onToggleCompleted={handleToggleTaskCompletion}
+                          onDelete={handleDeleteTask}
+                          registrationLabel={getRegistrationLabel(task)}
+                        />
+                      ))}
+                    </VStack>
+                  </SortableContext>
+                )}
+              </AccordionPanel>
+            </AccordionItem>
+          </Accordion>
+        </VStack>
       </Box>
 
-      <VStack>
-        <TaskColumn
-          title="未着手"
-          tasks={todoTasks}
-          isPending={isPending}
-          onUpdateStatus={handleUpdateTaskStatus}
-          onEdit={openEditModal}
-          onDelete={openDeleteDialog}
-          registrationLabels={registrationLabels}
-        />
-        <TaskColumn
-          title="進行中"
-          tasks={inProgressTasks}
-          isPending={isPending}
-          onUpdateStatus={handleUpdateTaskStatus}
-          onEdit={openEditModal}
-          onDelete={openDeleteDialog}
-          registrationLabels={registrationLabels}
-        />
-        <TaskColumn
-          title="完了"
-          tasks={completedTasks}
-          isPending={isPending}
-          onUpdateStatus={handleUpdateTaskStatus}
-          onEdit={openEditModal}
-          onDelete={openDeleteDialog}
-          registrationLabels={registrationLabels}
-          extraHeader={
-            completedTasks.length > 0 && (
-              <Button
-                size="xs"
-                colorScheme="red"
-                variant="outline"
-                onClick={openDeleteCompletedDialog}
-                isDisabled={isPending}
-              >
-                完了タスクをすべて削除
-              </Button>
-            )
-          }
-        />
-      </VStack>
-
-      <EditTaskModal
-        isOpen={modals.edit}
-        onClose={() => closeModal("edit")}
-        task={selectedTask}
-        lectureItems={lectureItems}
-        onSuccess={() => closeModal("edit")}
-        onUpdate={handleUpdateTask}
-        isPending={isPending}
-      />
-
-      {selectedTask && (
-        <DeleteTaskDialog
-          isOpen={modals.delete}
-          onClose={() => closeModal("delete")}
-          onDelete={async () => {
-            if (!selectedTask) return false;
-
-            await withFeedback(handleDeleteTask(selectedTask.id), {
-              successMessage: "タスクを削除しました",
-              successTitle: "タスク削除",
-            });
-
-            closeModal("delete");
-            return true;
-          }}
-        />
-      )}
-
-      <DeleteCompletedTasksDialog
-        isOpen={modals.deleteCompleted}
-        onClose={() => closeModal("deleteCompleted")}
-        onDelete={async () => {
-          const count = await withFeedback(handleDeleteCompletedTasks(), {
-            successMessage: count => `${count}件の完了タスクを削除しました`,
-            successTitle: "一括削除",
-          });
-          if (count !== undefined) {
-            closeModal("deleteCompleted");
-          }
-          return true;
-        }}
-        taskCount={completedTasks.length}
-      />
-    </Box>
+      <DragOverlay>
+        {activeTask ? (
+          <Box maxW="full" w="full" opacity={0.95}>
+            <TaskItem
+              task={activeTask}
+              isPending
+              lectureItems={lectureItems}
+              onUpdate={handleUpdateTask}
+              onToggleCompleted={handleToggleTaskCompletion}
+              onDelete={handleDeleteTask}
+              registrationLabel={getRegistrationLabel(activeTask)}
+            />
+          </Box>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 };
 

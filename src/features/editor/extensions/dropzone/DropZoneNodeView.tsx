@@ -66,7 +66,7 @@ export const DropZoneNodeView: React.FC<NodeViewProps> = ({
 
         // Upload each file and insert as ResizableMedia
         for (const file of imageFiles) {
-          // biome-ignore lint/suspicious/noImplicitAnyLet: <explanation>
+          // biome-ignore lint/suspicious/noImplicitAnyLet: legacy reason
           let src;
 
           if (uploadFn) {

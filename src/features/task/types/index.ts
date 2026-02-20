@@ -1,38 +1,26 @@
 import { z } from "zod";
 
 export const TaskStatus = {
-  TODO: 1,
-  IN_PROGRESS: 2,
-  DONE: 3,
-} as const;
-
-export const TaskPriority = {
-  LOW: 1,
-  MEDIUM: 2,
-  HIGH: 3,
+  INCOMPLETE: 1,
+  DONE: 2,
 } as const;
 
 export type TaskStatusType = (typeof TaskStatus)[keyof typeof TaskStatus];
-export type TaskPriorityType = (typeof TaskPriority)[keyof typeof TaskPriority];
 
-// Form validation schema - プロジェクト標準に合わせる
 export const taskFormSchema = z.object({
   title: z.string().min(1, "タイトルを入力してください"),
   description: z.string().optional(),
   registrationId: z.string().nullable().optional(),
-  priority: z.number().min(1).max(3).default(TaskPriority.MEDIUM),
-  status: z.number().min(1).max(3).default(TaskStatus.TODO),
+  status: z.number().min(1).max(2).default(TaskStatus.INCOMPLETE),
   dueDate: z.date().nullable().optional(),
 });
 
 export type TaskFormData = z.infer<typeof taskFormSchema>;
 
-// Server Actions用の型（より明確に）
 export interface CreateTaskData {
   title: string;
   description?: string;
   dueDate?: Date | string;
-  priority?: TaskPriorityType;
   registrationId?: string;
 }
 

@@ -8,7 +8,6 @@ import { getScheduleKey } from "@/features/timetable/utils";
 import { getMe } from "@/features/user/actions";
 import { Button, Heading, Text, VStack } from "@yamada-ui/react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "講義編集",
@@ -16,16 +15,17 @@ export const metadata: Metadata = {
 };
 
 type LectureEditPageProps = {
-  params: {
+  params: Promise<{
     lectureId: string;
-  };
+  }>;
 };
 
 const LectureEditPage = async ({ params }: LectureEditPageProps) => {
+  const { lectureId } = await params;
   const [lecture, terms, canEdit, me] = await Promise.all([
-    getLectureCatalogDetail(params.lectureId),
+    getLectureCatalogDetail(lectureId),
     getTerms(),
-    canEditLecture(params.lectureId),
+    canEditLecture(lectureId),
     getMe(),
   ]);
   const isOwner = lecture.owner.id === me;
@@ -60,7 +60,7 @@ const LectureEditPage = async ({ params }: LectureEditPageProps) => {
       />
 
       <Button
-        as={Link}
+        as="a"
         href={`/lectures/${lecture.id}`}
         variant="outline"
         w="fit-content"

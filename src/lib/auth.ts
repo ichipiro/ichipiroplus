@@ -81,7 +81,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
     error: "/auth/error",
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (account?.provider === "microsoft-entra-id") {
         const email = user.email || "";
         // 大学のメールアドレスのみ許可

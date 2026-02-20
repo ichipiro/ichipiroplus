@@ -1,4 +1,4 @@
-import { MAX_TIME } from "./constant";
+import { DAYS, MAX_TIME, TIMES } from "./constant";
 
 /**
  * 年度とタームを検証する
@@ -37,3 +37,22 @@ export const getDayTimeByScheduleKey = (scheduleKey: number) => {
   const time = scheduleKey % MAX_TIME;
   return { day, time };
 };
+
+export const DAY_LABELS: Record<number, string> = {
+  1: "月",
+  2: "火",
+  3: "水",
+  4: "木",
+  5: "金",
+};
+
+export const formatDayTimeLabel = (day: number, time: number) => {
+  return `${DAY_LABELS[day] ?? day}曜${time}限`;
+};
+
+export const SCHEDULE_OPTIONS = DAYS.flatMap(day =>
+  TIMES.map(time => ({
+    id: getScheduleKey(day, time),
+    label: formatDayTimeLabel(day, time),
+  })),
+);

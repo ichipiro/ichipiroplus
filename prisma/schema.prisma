@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Account {
@@ -202,8 +201,8 @@ model Task {
   title          String
   description    String?
   dueDate        DateTime?
-  priority       Int           @default(2) // 1: Low, 2: Medium, 3: High
-  status         Int           @default(1) // 1: Todo, 2: In Progress, 3: Done
+  status         Int           @default(1) // 1: Incomplete, 2: Done
+  sortOrder      Int           @default(0)
 
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   registration   Registration? @relation(fields: [registrationId], references: [id])

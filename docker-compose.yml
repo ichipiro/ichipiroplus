@@ -31,6 +31,7 @@ services:
         for b in $$buckets; do
           [ -z "$$b" ] && continue;
           mc mb --ignore-existing "local/$$b" || true;
+          mc anonymous set download "local/$$b";
         done;
         echo "buckets ensured";
       '

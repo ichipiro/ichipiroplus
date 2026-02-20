@@ -28,7 +28,7 @@ const LectureList = async ({ lectures, termId }: LectureListProps) => {
           {lectures.map(lecture => {
             //公開でない && 講義作成者でない 場合は表示しない
             if (!lecture.isPublic && userId !== lecture.ownerId) {
-              return;
+              return null;
             }
             return (
               <GridItem key={lecture.id}>
@@ -37,9 +37,7 @@ const LectureList = async ({ lectures, termId }: LectureListProps) => {
             );
           })}
         </Grid>
-      ) : (
-        <></>
-      )}
+      ) : null}
     </>
   );
 };

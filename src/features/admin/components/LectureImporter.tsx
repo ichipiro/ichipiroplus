@@ -116,7 +116,7 @@ export function LectureImporter() {
             <Button
               leftIcon={<Upload />}
               onClick={() => fileInputRef.current?.click()}
-              isLoading={isValidating}
+              loading={isValidating}
               loadingText="検証中..."
               colorScheme="primary"
             >
@@ -183,7 +183,7 @@ export function LectureImporter() {
                 colorScheme="success"
                 leftIcon={<Check />}
                 onClick={handleImport}
-                isLoading={isImporting}
+                loading={isImporting}
                 loadingText="インポート中..."
               >
                 インポート実行

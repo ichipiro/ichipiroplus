@@ -63,16 +63,8 @@ export const getNavigationItems = (): NavMenuItem[] => {
       href: "/settings",
       children: [
         {
-          label: "プロフィール設定",
-          href: "/settings?tab=profile",
-        },
-        {
-          label: "アカウント設定",
-          href: "/settings?tab=account",
-        },
-        {
-          label: "表示設定",
-          href: "/settings?tab=display",
+          label: "一般設定",
+          href: "/settings?tab=general",
         },
         {
           label: "通知設定",

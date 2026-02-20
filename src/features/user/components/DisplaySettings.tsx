@@ -12,8 +12,9 @@ interface DisplaySettingsProps {
 
 const DisplaySettings = ({ isTimetablePublic }: DisplaySettingsProps) => {
   const { withFeedback } = useActionFeedback();
-  const [isPublic, setIsPublic] = useState(isTimetablePublic);
+  const [pendingIsPublic, setPendingIsPublic] = useState<boolean | null>(null);
   const [isPending, startTransition] = useTransition();
+  const isPublic = pendingIsPublic ?? isTimetablePublic;
 
   return (
     <VStack w="full" align="start" gap={4}>
@@ -25,10 +26,11 @@ const DisplaySettings = ({ isTimetablePublic }: DisplaySettingsProps) => {
           有効にすると、プロフィールページで現在タームの時間割を公開します。
         </Text>
         <Switch
-          isChecked={isPublic}
-          isDisabled={isPending}
+          checked={isPublic}
+          disabled={isPending}
           onChange={() => {
             const next = !isPublic;
+            setPendingIsPublic(next);
             startTransition(async () => {
               const updated = await withFeedback(
                 updateTimetableVisibility(next),
@@ -41,7 +43,9 @@ const DisplaySettings = ({ isTimetablePublic }: DisplaySettingsProps) => {
               );
 
               if (updated !== undefined) {
-                setIsPublic(updated);
+                setPendingIsPublic(updated);
+              } else {
+                setPendingIsPublic(null);
               }
             });
           }}

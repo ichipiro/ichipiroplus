@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 type WebappLayoutProps = {
   children?: ReactNode;
-  params?: unknown;
+  params?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const WebappLayout = ({ children }: WebappLayoutProps) => {

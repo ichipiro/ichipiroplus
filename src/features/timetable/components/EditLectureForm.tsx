@@ -1,8 +1,7 @@
 "use client";
 
 import { updateLecture } from "@/features/timetable/actions";
-import { DAYS, TIMES } from "@/features/timetable/constant";
-import { getScheduleKey } from "@/features/timetable/utils";
+import { SCHEDULE_OPTIONS } from "@/features/timetable/utils";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import {
   Box,
@@ -18,7 +17,7 @@ import {
   Wrap,
 } from "@yamada-ui/react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useReducer, useTransition } from "react";
 
 interface EditLectureFormProps {
   lectureId: string;
@@ -37,20 +36,75 @@ interface EditLectureFormProps {
   canChangeVisibility: boolean;
 }
 
-const DAY_LABELS: Record<number, string> = {
-  1: "月",
-  2: "火",
-  3: "水",
-  4: "木",
-  5: "金",
+type FormState = {
+  name: string;
+  instructor: string;
+  room: string;
+  biko: string;
+  selectedTermNumbers: number[];
+  selectedScheduleIds: number[];
+  isPublic: boolean;
+  isPublicEditable: boolean;
 };
 
-const SCHEDULE_OPTIONS = DAYS.flatMap(day =>
-  TIMES.map(time => ({
-    id: getScheduleKey(day, time),
-    label: `${DAY_LABELS[day]}曜${time}限`,
-  })),
-);
+type FormAction =
+  | {
+      type: "setField";
+      field: "name" | "instructor" | "room" | "biko";
+      value: string;
+    }
+  | { type: "toggleTermNumber"; termNumber: number }
+  | { type: "toggleScheduleId"; scheduleId: number }
+  | { type: "toggleIsPublic" }
+  | { type: "toggleIsPublicEditable" };
+
+const createInitialFormState = (
+  initialData: EditLectureFormProps["initialData"],
+): FormState => ({
+  name: initialData.name,
+  instructor: initialData.instructor,
+  room: initialData.room,
+  biko: initialData.biko,
+  selectedTermNumbers: initialData.termNumbers,
+  selectedScheduleIds: initialData.scheduleIds,
+  isPublic: initialData.isPublic,
+  isPublicEditable: initialData.isPublicEditable,
+});
+
+const formReducer = (state: FormState, action: FormAction): FormState => {
+  switch (action.type) {
+    case "setField":
+      return { ...state, [action.field]: action.value };
+    case "toggleTermNumber":
+      return {
+        ...state,
+        selectedTermNumbers: state.selectedTermNumbers.includes(
+          action.termNumber,
+        )
+          ? state.selectedTermNumbers.filter(
+              value => value !== action.termNumber,
+            )
+          : [...state.selectedTermNumbers, action.termNumber],
+      };
+    case "toggleScheduleId":
+      return {
+        ...state,
+        selectedScheduleIds: state.selectedScheduleIds.includes(
+          action.scheduleId,
+        )
+          ? state.selectedScheduleIds.filter(
+              value => value !== action.scheduleId,
+            )
+          : [...state.selectedScheduleIds, action.scheduleId],
+      };
+    case "toggleIsPublic":
+      return { ...state, isPublic: !state.isPublic };
+    case "toggleIsPublicEditable":
+      return { ...state, isPublicEditable: !state.isPublicEditable };
+    default:
+      return state;
+  }
+};
 
 const EditLectureForm = ({
   lectureId,
@@ -63,43 +117,18 @@ const EditLectureForm = ({
   const { withFeedback } = useActionFeedback();
   const [isPending, startTransition] = useTransition();
 
-  const [name, setName] = useState(initialData.name);
-  const [instructor, setInstructor] = useState(initialData.instructor);
-  const [room, setRoom] = useState(initialData.room);
-  const [biko, setBiko] = useState(initialData.biko);
-  const [selectedTermNumbers, setSelectedTermNumbers] = useState<number[]>(
-    initialData.termNumbers,
+  const [state, dispatch] = useReducer(
+    formReducer,
+    initialData,
+    createInitialFormState,
   );
-  const [selectedScheduleIds, setSelectedScheduleIds] = useState<number[]>(
-    initialData.scheduleIds,
-  );
-  const [isPublic, setIsPublic] = useState(initialData.isPublic);
-  const [isPublicEditable, setIsPublicEditable] = useState(
-    initialData.isPublicEditable,
-  );
-
-  const toggleTermNumber = (termNumber: number) => {
-    setSelectedTermNumbers(prev =>
-      prev.includes(termNumber)
-        ? prev.filter(value => value !== termNumber)
-        : [...prev, termNumber],
-    );
-  };
-
-  const toggleScheduleId = (scheduleId: number) => {
-    setSelectedScheduleIds(prev =>
-      prev.includes(scheduleId)
-        ? prev.filter(value => value !== scheduleId)
-        : [...prev, scheduleId],
-    );
-  };
 
   const handleSubmit = () => {
     if (
       !canEdit ||
-      !name.trim() ||
-      selectedTermNumbers.length === 0 ||
-      selectedScheduleIds.length === 0
+      !state.name.trim() ||
+      state.selectedTermNumbers.length === 0 ||
+      state.selectedScheduleIds.length === 0
     ) {
       return;
     }
@@ -107,16 +136,16 @@ const EditLectureForm = ({
     startTransition(async () => {
       const updated = await withFeedback(
         updateLecture(lectureId, {
-          name: name.trim(),
-          instructor: instructor.trim() || null,
-          room: room.trim() || null,
-          biko: biko.trim() || null,
-          termNumbers: selectedTermNumbers,
-          scheduleIds: selectedScheduleIds,
+          name: state.name.trim(),
+          instructor: state.instructor.trim() || null,
+          room: state.room.trim() || null,
+          biko: state.biko.trim() || null,
+          termNumbers: state.selectedTermNumbers,
+          scheduleIds: state.selectedScheduleIds,
           ...(canChangeVisibility
             ? {
-                isPublic,
-                isPublicEditable,
+                isPublic: state.isPublic,
+                isPublicEditable: state.isPublicEditable,
               }
             : {}),
         }),
@@ -138,26 +167,44 @@ const EditLectureForm = ({
       <VStack align="stretch" gap={4}>
         <FormControl label="講義名" required>
           <Input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            isDisabled={!canEdit}
+            value={state.name}
+            onChange={e =>
+              dispatch({
+                type: "setField",
+                field: "name",
+                value: e.target.value,
+              })
+            }
+            disabled={!canEdit}
           />
         </FormControl>
 
         <HStack align="start" gap={4} flexWrap="wrap">
           <FormControl label="担当" w={{ base: "full", md: "48%" }}>
             <Input
-              value={instructor}
-              onChange={e => setInstructor(e.target.value)}
-              isDisabled={!canEdit}
+              value={state.instructor}
+              onChange={e =>
+                dispatch({
+                  type: "setField",
+                  field: "instructor",
+                  value: e.target.value,
+                })
+              }
+              disabled={!canEdit}
             />
           </FormControl>
 
           <FormControl label="教室・場所" w={{ base: "full", md: "48%" }}>
             <Input
-              value={room}
-              onChange={e => setRoom(e.target.value)}
-              isDisabled={!canEdit}
+              value={state.room}
+              onChange={e =>
+                dispatch({
+                  type: "setField",
+                  field: "room",
+                  value: e.target.value,
+                })
+              }
+              disabled={!canEdit}
             />
           </FormControl>
         </HStack>
@@ -165,13 +212,18 @@ const EditLectureForm = ({
         <FormControl label="ターム" required>
           <Wrap>
             {termOptions.map(term => {
-              const checked = selectedTermNumbers.includes(term.number);
+              const checked = state.selectedTermNumbers.includes(term.number);
               return (
                 <Checkbox
                   key={term.number}
-                  isChecked={checked}
-                  isDisabled={!canEdit}
-                  onChange={() => toggleTermNumber(term.number)}
+                  checked={checked}
+                  disabled={!canEdit}
+                  onChange={() =>
+                    dispatch({
+                      type: "toggleTermNumber",
+                      termNumber: term.number,
+                    })
+                  }
                 >
                   {term.name}
                 </Checkbox>
@@ -183,13 +235,18 @@ const EditLectureForm = ({
         <FormControl label="開講時期（曜日・時限）" required>
           <Wrap>
             {SCHEDULE_OPTIONS.map(schedule => {
-              const checked = selectedScheduleIds.includes(schedule.id);
+              const checked = state.selectedScheduleIds.includes(schedule.id);
               return (
                 <Checkbox
                   key={schedule.id}
-                  isChecked={checked}
-                  isDisabled={!canEdit}
-                  onChange={() => toggleScheduleId(schedule.id)}
+                  checked={checked}
+                  disabled={!canEdit}
+                  onChange={() =>
+                    dispatch({
+                      type: "toggleScheduleId",
+                      scheduleId: schedule.id,
+                    })
+                  }
                 >
                   {schedule.label}
                 </Checkbox>
@@ -200,25 +257,31 @@ const EditLectureForm = ({
 
         <FormControl label="備考">
           <Textarea
-            value={biko}
-            onChange={e => setBiko(e.target.value)}
+            value={state.biko}
+            onChange={e =>
+              dispatch({
+                type: "setField",
+                field: "biko",
+                value: e.target.value,
+              })
+            }
             minH="120px"
-            isDisabled={!canEdit}
+            disabled={!canEdit}
           />
         </FormControl>
 
         <VStack align="stretch" gap={3} pt={2}>
           <Switch
-            isChecked={isPublic}
-            onChange={() => setIsPublic(prev => !prev)}
-            isDisabled={!canEdit || !canChangeVisibility}
+            checked={state.isPublic}
+            onChange={() => dispatch({ type: "toggleIsPublic" })}
+            disabled={!canEdit || !canChangeVisibility}
           >
             公開する（他ユーザーに表示可能）
           </Switch>
           <Switch
-            isChecked={isPublicEditable}
-            onChange={() => setIsPublicEditable(prev => !prev)}
-            isDisabled={!canEdit || !canChangeVisibility}
+            checked={state.isPublicEditable}
+            onChange={() => dispatch({ type: "toggleIsPublicEditable" })}
+            disabled={!canEdit || !canChangeVisibility}
           >
             他ユーザーの編集を許可する
           </Switch>
@@ -234,11 +297,11 @@ const EditLectureForm = ({
             colorScheme="blue"
             onClick={handleSubmit}
             loading={isPending}
-            isDisabled={
+            disabled={
               !canEdit ||
-              !name.trim() ||
-              selectedTermNumbers.length === 0 ||
-              selectedScheduleIds.length === 0
+              !state.name.trim() ||
+              state.selectedTermNumbers.length === 0 ||
+              state.selectedScheduleIds.length === 0
             }
           >
             保存

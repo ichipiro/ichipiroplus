@@ -90,9 +90,9 @@ export default function NotificationSettings() {
                   <HStack justifyContent="flex-end">
                     <Switch
                       id="push-notifications"
-                      isChecked={isSubscribed}
+                      checked={isSubscribed}
                       onChange={() => toggleNotifications()}
-                      isDisabled={isProcessing}
+                      disabled={isProcessing}
                       colorScheme="primary"
                     />
                   </HStack>
@@ -122,13 +122,13 @@ export default function NotificationSettings() {
                             <HStack justifyContent="flex-end">
                               <Switch
                                 id="system-notices"
-                                isChecked={settings.systemNotices}
+                                checked={settings.systemNotices}
                                 onChange={() =>
                                   updateSettings({
                                     systemNotices: !settings.systemNotices,
                                   })
                                 }
-                                isDisabled={!isSubscribed || isProcessing}
+                                disabled={!isSubscribed || isProcessing}
                                 colorScheme="primary"
                               />
                             </HStack>
@@ -143,7 +143,7 @@ export default function NotificationSettings() {
                         colorScheme="danger"
                         size="sm"
                         onClick={() => toggleNotifications()}
-                        isLoading={isProcessing}
+                        loading={isProcessing}
                         loadingText="処理中..."
                       >
                         すべての通知をオフにする
@@ -185,8 +185,8 @@ export default function NotificationSettings() {
                           }
                           colorScheme="primary"
                           variant="outline"
-                          isDisabled={permission !== "granted" || isProcessing}
-                          isLoading={isProcessing}
+                          disabled={permission !== "granted" || isProcessing}
+                          loading={isProcessing}
                         >
                           ローカル通知を表示
                         </Button>
@@ -196,8 +196,8 @@ export default function NotificationSettings() {
                             sendTestNotifications(testTitle, testBody)
                           }
                           colorScheme="primary"
-                          isDisabled={!isSubscribed || isProcessing}
-                          isLoading={isProcessing}
+                          disabled={!isSubscribed || isProcessing}
+                          loading={isProcessing}
                         >
                           サーバーから通知を送信
                         </Button>

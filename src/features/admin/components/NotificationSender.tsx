@@ -205,7 +205,7 @@ export function NotificationSender() {
             <Button
               type="submit"
               colorScheme="blue"
-              isLoading={isPending}
+              loading={isPending}
               size="lg"
             >
               通知を送信

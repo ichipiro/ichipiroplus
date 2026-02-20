@@ -1,7 +1,7 @@
 "use client";
 
 import { useNotice } from "@yamada-ui/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import {
   getNotificationSettings,
   registerPushSubscription,
@@ -21,75 +21,88 @@ import {
 /**
  * 通知設定を管理するためのカスタムフック
  */
+type NotificationHookState = {
+  isSupported: boolean;
+  isLoading: boolean;
+  isProcessing: boolean;
+  permission: NotificationPermission;
+  subscription: PushSubscription | null;
+  subscriptionState: SubscriptionState;
+};
+
+type NotificationHookAction =
+  | { type: "setInitialization"; payload: Partial<NotificationHookState> }
+  | { type: "setProcessing"; payload: boolean }
+  | { type: "setPermission"; payload: NotificationPermission }
+  | { type: "setSubscription"; payload: PushSubscription | null }
+  | { type: "setSubscriptionState"; payload: SubscriptionState };
+
+const initialState: NotificationHookState = {
+  isSupported: false,
+  isLoading: true,
+  isProcessing: false,
+  permission: "default",
+  subscription: null,
+  subscriptionState: {
+    isSubscribed: false,
+    settings: null,
+  },
+};
+
+const notificationReducer = (
+  state: NotificationHookState,
+  action: NotificationHookAction,
+): NotificationHookState => {
+  switch (action.type) {
+    case "setInitialization":
+      return { ...state, ...action.payload };
+    case "setProcessing":
+      return { ...state, isProcessing: action.payload };
+    case "setPermission":
+      return { ...state, permission: action.payload };
+    case "setSubscription":
+      return { ...state, subscription: action.payload };
+    case "setSubscriptionState":
+      return { ...state, subscriptionState: action.payload };
+    default:
+      return state;
+  }
+};
+
 export function useNotification() {
-  // 状態管理
-  const [isSupported, setIsSupported] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [permission, setPermission] =
-    useState<NotificationPermission>("default");
-  const [subscription, setSubscription] = useState<PushSubscription | null>(
-    null,
-  );
-  const [subscriptionState, setSubscriptionState] = useState<SubscriptionState>(
-    {
-      isSubscribed: false,
-      settings: null,
-    },
-  );
+  const [state, dispatch] = useReducer(notificationReducer, initialState);
 
   // 通知表示用
   const notice = useNotice();
 
   // 初期化: ブラウザのサポート状況と現在の設定を確認
-  useEffect(() => {
-    async function initialize() {
-      try {
-        // ブラウザのサポート状況をチェック
-        const supported =
-          "Notification" in window &&
-          "serviceWorker" in navigator &&
-          "PushManager" in window;
-
-        setIsSupported(supported);
-
-        if (!supported) {
-          setIsLoading(false);
-          return;
-        }
-
-        // 現在の許可状態を取得
-        setPermission(Notification.permission);
-
-        // 現在のサブスクリプション状態を取得
-        await checkSubscriptionState();
-      } catch (error) {
-        console.error("通知初期化エラー:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    initialize();
-  }, []);
-
   /**
    * 現在のサブスクリプション状態を確認する
    */
-  const checkSubscriptionState = async () => {
+  const checkSubscriptionState = useCallback(async () => {
     try {
       // ブラウザ側のサブスクリプションを取得
       const browserSubscription = await getOrCreatePushSubscription();
 
       if (!browserSubscription) {
-        setSubscriptionState({
-          isSubscribed: false,
-          settings: null,
+        dispatch({
+          type: "setSubscriptionState",
+          payload: {
+            isSubscribed: false,
+            settings: null,
+          },
+        });
+        dispatch({
+          type: "setSubscription",
+          payload: null,
         });
         return;
       }
 
-      setSubscription(browserSubscription);
+      dispatch({
+        type: "setSubscription",
+        payload: browserSubscription,
+      });
 
       // サーバー側のサブスクリプション設定を取得
       const serverSubscriptions = await getNotificationSettings();
@@ -100,30 +113,80 @@ export function useNotification() {
       );
 
       if (!matchingSubscription) {
-        setSubscriptionState({
-          isSubscribed: false,
-          settings: null,
+        dispatch({
+          type: "setSubscriptionState",
+          payload: {
+            isSubscribed: false,
+            settings: null,
+          },
         });
         return;
       }
 
       // サブスクリプションが存在する場合は設定を返す
-      setSubscriptionState({
-        isSubscribed: true,
-        settings: {
-          taskReminders: matchingSubscription.task_reminders,
-          newArticles: matchingSubscription.new_articles,
-          systemNotices: matchingSubscription.system_notices,
+      dispatch({
+        type: "setSubscriptionState",
+        payload: {
+          isSubscribed: true,
+          settings: {
+            taskReminders: matchingSubscription.task_reminders,
+            newArticles: matchingSubscription.new_articles,
+            systemNotices: matchingSubscription.system_notices,
+          },
         },
       });
     } catch (error) {
       console.error("サブスクリプション状態の確認エラー:", error);
-      setSubscriptionState({
-        isSubscribed: false,
-        settings: null,
+      dispatch({
+        type: "setSubscriptionState",
+        payload: {
+          isSubscribed: false,
+          settings: null,
+        },
       });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    async function initialize() {
+      try {
+        // ブラウザのサポート状況をチェック
+        const supported =
+          "Notification" in window &&
+          "serviceWorker" in navigator &&
+          "PushManager" in window;
+
+        if (!supported) {
+          dispatch({
+            type: "setInitialization",
+            payload: {
+              isSupported: false,
+              isLoading: false,
+              permission: "default",
+            },
+          });
+          return;
+        }
+
+        dispatch({
+          type: "setInitialization",
+          payload: {
+            isSupported: supported,
+            permission: Notification.permission,
+          },
+        });
+
+        // 現在のサブスクリプション状態を取得
+        await checkSubscriptionState();
+      } catch (error) {
+        console.error("通知初期化エラー:", error);
+      } finally {
+        dispatch({ type: "setInitialization", payload: { isLoading: false } });
+      }
+    }
+
+    initialize();
+  }, [checkSubscriptionState]);
 
   /**
    * 通知の有効/無効を切り替える
@@ -131,14 +194,14 @@ export function useNotification() {
   const toggleNotifications = async (
     settings?: NotificationSettings,
   ): Promise<boolean> => {
-    if (!isSupported || isProcessing) return false;
+    if (!state.isSupported || state.isProcessing) return false;
 
-    setIsProcessing(true);
+    dispatch({ type: "setProcessing", payload: true });
 
     try {
-      if (!subscriptionState.isSubscribed) {
+      if (!state.subscriptionState.isSubscribed) {
         const permissionResult = await requestNotificationPermission();
-        setPermission(permissionResult);
+        dispatch({ type: "setPermission", payload: permissionResult });
 
         if (permissionResult !== "granted") {
           return false;
@@ -155,13 +218,16 @@ export function useNotification() {
         );
         const response = await registerPushSubscription(subscriptionData);
 
-        setSubscription(newSubscription);
-        setSubscriptionState({
-          isSubscribed: true,
-          settings: {
-            taskReminders: response.subscription.task_reminders,
-            newArticles: response.subscription.new_articles,
-            systemNotices: response.subscription.system_notices,
+        dispatch({ type: "setSubscription", payload: newSubscription });
+        dispatch({
+          type: "setSubscriptionState",
+          payload: {
+            isSubscribed: true,
+            settings: {
+              taskReminders: response.subscription.task_reminders,
+              newArticles: response.subscription.new_articles,
+              systemNotices: response.subscription.system_notices,
+            },
           },
         });
 
@@ -172,46 +238,48 @@ export function useNotification() {
         });
 
         return true;
-        // biome-ignore lint/style/noUselessElse: <explanation>
-      } else {
-        if (!subscription) {
-          return false;
-        }
+      }
 
-        // サーバーからサブスクリプション情報を取得して正しいIDを見つける
-        const serverSubscriptions = await getNotificationSettings();
-        const matchingSubscription = serverSubscriptions.find(
-          sub => sub.endpoint === subscription.endpoint,
-        );
+      if (!state.subscription) {
+        return false;
+      }
 
-        if (!matchingSubscription) {
-          throw new Error("サブスクリプションが見つかりませんでした");
-        }
+      // サーバーからサブスクリプション情報を取得して正しいIDを見つける
+      const serverSubscriptions = await getNotificationSettings();
+      const matchingSubscription = serverSubscriptions.find(
+        sub => sub.endpoint === state.subscription?.endpoint,
+      );
 
-        const response = await unregisterPushSubscription(
-          matchingSubscription.id,
-        );
+      if (!matchingSubscription) {
+        throw new Error("サブスクリプションが見つかりませんでした");
+      }
 
-        if (!response.success) {
-          throw new Error("サーバーからのサブスクリプション削除に失敗しました");
-        }
+      const response = await unregisterPushSubscription(
+        matchingSubscription.id,
+      );
 
-        await unsubscribeFromBrowser(subscription);
+      if (!response.success) {
+        throw new Error("サーバーからのサブスクリプション削除に失敗しました");
+      }
 
-        setSubscription(null);
-        setSubscriptionState({
+      await unsubscribeFromBrowser(state.subscription);
+
+      dispatch({ type: "setSubscription", payload: null });
+      dispatch({
+        type: "setSubscriptionState",
+        payload: {
           isSubscribed: false,
           settings: null,
-        });
+        },
+      });
 
-        notice({
-          title: "通知設定",
-          description: "プッシュ通知を無効にしました",
-          status: "info",
-        });
+      notice({
+        title: "通知設定",
+        description: "プッシュ通知を無効にしました",
+        status: "info",
+      });
 
-        return true;
-      }
+      return true;
     } catch (error) {
       console.error("通知設定の変更に失敗しました:", error);
       notice({
@@ -224,7 +292,7 @@ export function useNotification() {
       });
       return false;
     } finally {
-      setIsProcessing(false);
+      dispatch({ type: "setProcessing", payload: false });
     }
   };
 
@@ -235,21 +303,21 @@ export function useNotification() {
     newSettings: Partial<NotificationSettings>,
   ): Promise<boolean> => {
     if (
-      !isSupported ||
-      !subscription ||
-      !subscriptionState.isSubscribed ||
-      isProcessing
+      !state.isSupported ||
+      !state.subscription ||
+      !state.subscriptionState.isSubscribed ||
+      state.isProcessing
     ) {
       return false;
     }
 
-    setIsProcessing(true);
+    dispatch({ type: "setProcessing", payload: true });
 
     try {
       // サーバーからサブスクリプション情報を取得して正しいIDを見つける
       const serverSubscriptions = await getNotificationSettings();
       const matchingSubscription = serverSubscriptions.find(
-        sub => sub.endpoint === subscription.endpoint,
+        sub => sub.endpoint === state.subscription?.endpoint,
       );
 
       if (!matchingSubscription) {
@@ -267,21 +335,24 @@ export function useNotification() {
       );
 
       if (response.success) {
-        setSubscriptionState({
-          isSubscribed: true,
-          settings: {
-            taskReminders:
-              newSettings.taskReminders ??
-              subscriptionState.settings?.taskReminders ??
-              false,
-            newArticles:
-              newSettings.newArticles ??
-              subscriptionState.settings?.newArticles ??
-              false,
-            systemNotices:
-              newSettings.systemNotices ??
-              subscriptionState.settings?.systemNotices ??
-              false,
+        dispatch({
+          type: "setSubscriptionState",
+          payload: {
+            isSubscribed: true,
+            settings: {
+              taskReminders:
+                newSettings.taskReminders ??
+                state.subscriptionState.settings?.taskReminders ??
+                false,
+              newArticles:
+                newSettings.newArticles ??
+                state.subscriptionState.settings?.newArticles ??
+                false,
+              systemNotices:
+                newSettings.systemNotices ??
+                state.subscriptionState.settings?.systemNotices ??
+                false,
+            },
           },
         });
 
@@ -307,7 +378,7 @@ export function useNotification() {
       });
       return false;
     } finally {
-      setIsProcessing(false);
+      dispatch({ type: "setProcessing", payload: false });
     }
   };
 
@@ -318,11 +389,15 @@ export function useNotification() {
     title: string,
     body: string,
   ): Promise<boolean> => {
-    if (!isSupported || !subscriptionState.isSubscribed || isProcessing) {
+    if (
+      !state.isSupported ||
+      !state.subscriptionState.isSubscribed ||
+      state.isProcessing
+    ) {
       return false;
     }
 
-    setIsProcessing(true);
+    dispatch({ type: "setProcessing", payload: true });
 
     try {
       const response = await sendTestNotification({ title, body });
@@ -350,7 +425,7 @@ export function useNotification() {
       });
       return false;
     } finally {
-      setIsProcessing(false);
+      dispatch({ type: "setProcessing", payload: false });
     }
   };
 
@@ -362,11 +437,15 @@ export function useNotification() {
     body: string,
     url?: string,
   ): Promise<boolean> => {
-    if (!isSupported || permission !== "granted" || isProcessing) {
+    if (
+      !state.isSupported ||
+      state.permission !== "granted" ||
+      state.isProcessing
+    ) {
       return false;
     }
 
-    setIsProcessing(true);
+    dispatch({ type: "setProcessing", payload: true });
 
     try {
       const success = await showLocalNotificationViaServiceWorker(
@@ -398,17 +477,17 @@ export function useNotification() {
       });
       return false;
     } finally {
-      setIsProcessing(false);
+      dispatch({ type: "setProcessing", payload: false });
     }
   };
 
   return {
-    isSupported,
-    isLoading,
-    isProcessing,
-    permission,
-    isSubscribed: subscriptionState.isSubscribed,
-    settings: subscriptionState.settings,
+    isSupported: state.isSupported,
+    isLoading: state.isLoading,
+    isProcessing: state.isProcessing,
+    permission: state.permission,
+    isSubscribed: state.subscriptionState.isSubscribed,
+    settings: state.subscriptionState.settings,
 
     toggleNotifications,
     updateSettings,

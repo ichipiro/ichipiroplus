@@ -13,20 +13,21 @@ interface TableOfContentsProps {
   editor: Editor;
 }
 
+const debounce = <Args extends unknown[]>(
+  func: (...args: Args) => void,
+  wait: number,
+) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return (...args: Args) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
 export const TableOfContents: React.FC<TableOfContentsProps> = ({ editor }) => {
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
-
-  // biome-ignore lint/complexity/noBannedTypes: <explanation>
-  const debounce = (func: Function, wait: number) => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    return (...args: any[]) => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  };
 
   const updateToc = useCallback(() => {
     if (!editor) return;
@@ -71,7 +72,6 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ editor }) => {
     observerRef.current = new IntersectionObserver(handleIntersect, options);
 
     setTimeout(() => {
-      // biome-ignore lint/complexity/noForEach: <explanation>
       tocItems.forEach(item => {
         if (item.id) {
           const element = document.getElementById(item.id);
@@ -87,7 +87,6 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ editor }) => {
     };
   }, [editor, tocItems]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     if (!editor) return;
 
@@ -104,14 +103,13 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ editor }) => {
     };
   }, [editor, updateToc]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     setupIntersectionObserver();
 
     return () => {
       observerRef.current?.disconnect();
     };
-  }, [tocItems, setupIntersectionObserver]);
+  }, [setupIntersectionObserver]);
 
   const handleItemClick = (id: string) => {
     if (!id) {
@@ -146,7 +144,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ editor }) => {
   };
 
   if (tocItems.length === 0) {
-    return <></>;
+    return null;
   }
 
   return (
@@ -167,13 +165,16 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ editor }) => {
       </Heading>
 
       <VStack align="start" position="relative">
-        {tocItems.map((item, index) => {
+        {tocItems.map(item => {
           const isActive = item.id === activeId;
           const markerSize = getMarkerSize(item.level);
 
           return (
-            // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-            <HStack key={index} gap="sm" pl={(item.level - 1) * 3}>
+            <HStack
+              key={item.id || `${item.level}-${item.text}`}
+              gap="sm"
+              pl={(item.level - 1) * 3}
+            >
               {/* マーカー（アクティブな項目のみ青色） */}
               <Box
                 width={`${markerSize}px`}

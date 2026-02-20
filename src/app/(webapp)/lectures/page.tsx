@@ -65,12 +65,13 @@ export const metadata: Metadata = {
 };
 
 type LecturesPageProps = {
-  searchParams?: { page?: string };
+  searchParams?: Promise<{ page?: string }>;
 };
 
 const LecturesPage = async ({ searchParams }: LecturesPageProps) => {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const currentTerm = await getCurrentTerm();
-  const page = parsePage(searchParams?.page);
+  const page = parsePage(resolvedSearchParams?.page);
   const [{ lectures, totalCount }, myRegistrations] = await Promise.all([
     getLectureCatalogPage({
       page,
@@ -246,9 +247,9 @@ const LecturesPage = async ({ searchParams }: LecturesPageProps) => {
 
       <HStack justify="space-between" w="full">
         <Button
-          as={Link}
+          as="a"
           href={buildPageHref(Math.max(1, page - 1))}
-          isDisabled={page <= 1}
+          disabled={page <= 1}
           variant="outline"
         >
           前へ
@@ -259,9 +260,9 @@ const LecturesPage = async ({ searchParams }: LecturesPageProps) => {
         </Text>
 
         <Button
-          as={Link}
+          as="a"
           href={buildPageHref(Math.min(totalPages, page + 1))}
-          isDisabled={page >= totalPages}
+          disabled={page >= totalPages}
           variant="outline"
         >
           次へ

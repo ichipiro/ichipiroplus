@@ -17,10 +17,12 @@ export type BubbleMenuProps = Omit<
   children: React.ReactNode;
 };
 
+const DEFAULT_TIPPY_OPTIONS = {};
+
 export const BubbleMenu: React.FC<BubbleMenuProps> = ({
   editor,
   pluginKey = "bubbleMenu",
-  tippyOptions = {},
+  tippyOptions = DEFAULT_TIPPY_OPTIONS,
   shouldShow = null,
   className,
   children,
@@ -60,8 +62,4 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
       {children}
     </div>
   );
-};
-
-BubbleMenu.defaultProps = {
-  className: "",
 };

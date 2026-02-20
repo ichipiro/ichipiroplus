@@ -162,11 +162,11 @@ export const suggestions = {
   render: () => {
     let component: ReactRenderer;
     let popup: { destroy: () => void }[];
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // biome-ignore lint/suspicious/noExplicitAny: legacy reason
     let localProps: Record<string, any> | undefined;
 
     return {
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      // biome-ignore lint/suspicious/noExplicitAny: legacy reason
       onStart: (props: Record<string, any> | undefined) => {
         localProps = { ...props, event: "" };
 
@@ -188,13 +188,13 @@ export const suggestions = {
         });
       },
 
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      // biome-ignore lint/suspicious/noExplicitAny: legacy reason
       onUpdate(props: Record<string, any> | undefined) {
         localProps = { ...props, event: "" };
 
         component.updateProps(localProps);
 
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        // biome-ignore lint/suspicious/noExplicitAny: legacy reason
         (popup[0] as any).setProps({
           getReferenceClientRect: localProps.clientRect,
         });
@@ -203,11 +203,11 @@ export const suggestions = {
       onKeyDown(props: { event: KeyboardEvent }) {
         component.updateProps({ ...localProps, event: props.event });
 
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        // biome-ignore lint/suspicious/noExplicitAny: legacy reason
         (component.ref as any).onKeyDown({ event: props.event });
 
         if (props.event.key === "Escape") {
-          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+          // biome-ignore lint/suspicious/noExplicitAny: legacy reason
           (popup[0] as any).hide();
 
           return true;

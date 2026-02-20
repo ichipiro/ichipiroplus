@@ -271,7 +271,7 @@ export const sendPushNotification = async ({
       body,
       url,
       type: notificationType,
-      timestamp: new Date().getTime(),
+      timestamp: Date.now(),
     });
 
     // 各サブスクリプションに通知を送信
