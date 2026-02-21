@@ -1,8 +1,12 @@
 /* eslint-disable */
 
-import React, { useEffect, useImperativeHandle, useRef, useState } from "react";
-import { stopPrevent } from "../../utils";
-
+import React, {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import {
   Box,
   Button,
@@ -13,6 +17,7 @@ import {
   Text,
   VStack,
 } from "@yamada-ui/react";
+import { stopPrevent } from "../../utils";
 import type { SlashMenuItem } from "./suggestions";
 
 interface CommandListProps {
@@ -28,16 +33,8 @@ export const CommandList = React.forwardRef(
     // スクロールエリアへの参照
     const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
-    // アイテムリストが変更されたらリファレンス配列を初期化
-    useEffect(() => {
-      itemRefs.current = itemRefs.current.slice(0, items.length);
-      setSelectedIndex(0);
-      // 最初のアイテムが選択されたらスクロールを一番上に
-      scrollToItem(0);
-    }, [items]);
-
     // 選択されたアイテムまでスクロールする関数
-    const scrollToItem = (index: number) => {
+    const scrollToItem = useCallback((index: number) => {
       // 少し遅延させてDOMが更新された後に実行する
       setTimeout(() => {
         const scrollArea = scrollAreaRef.current;
@@ -58,13 +55,20 @@ export const CommandList = React.forwardRef(
           scrollArea.scrollTop -= scrollAreaRect.top - selectedItemRect.top;
         }
       }, 0);
-    };
+    }, []);
+
+    // アイテムリストが変更されたらリファレンス配列を初期化
+    useEffect(() => {
+      itemRefs.current = itemRefs.current.slice(0, items.length);
+      setSelectedIndex(0);
+      // 最初のアイテムが選択されたらスクロールを一番上に
+      scrollToItem(0);
+    }, [items.length, scrollToItem]);
 
     // 選択インデックスが変更されたらスクロール
-    // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
     useEffect(() => {
       scrollToItem(selectedIndex);
-    }, [selectedIndex]);
+    }, [selectedIndex, scrollToItem]);
 
     useImperativeHandle(ref, () => ({
       onKeyDown: ({ event }: { event: KeyboardEvent }) => {
@@ -122,37 +126,35 @@ export const CommandList = React.forwardRef(
       >
         <VStack gap="none">
           {items.length ? (
-            <>
-              {items.map((item, index) => {
-                return (
-                  <Button
-                    variant="unstyled"
-                    onClick={() => selectItem(index)}
-                    onMouseEnter={() => setSelectedIndex(index)}
-                    onKeyDown={e => e.code === "Enter" && selectItem(index)}
-                    key={item.title}
-                    bgColor={index === selectedIndex ? "gray.100" : ""}
-                    margin="xs"
-                    ref={el => {
-                      itemRefs.current[index] = el;
-                    }}
-                    size="sm"
-                  >
-                    <HStack gap="sm" alignItems="baseline" marginX="md">
-                      <Box fontSize="xl" color="gray.600">
-                        {item.icon}
-                      </Box>
+            items.map((item, index) => {
+              return (
+                <Button
+                  variant="unstyled"
+                  onClick={() => selectItem(index)}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                  onKeyDown={e => e.code === "Enter" && selectItem(index)}
+                  key={item.title}
+                  bgColor={index === selectedIndex ? "gray.100" : ""}
+                  margin="xs"
+                  ref={el => {
+                    itemRefs.current[index] = el;
+                  }}
+                  size="sm"
+                >
+                  <HStack gap="sm" alignItems="baseline" marginX="md">
+                    <Box fontSize="xl" color="gray.600">
+                      {item.icon}
+                    </Box>
 
-                      <Text fontWeight="normal">{item.title}</Text>
+                    <Text fontWeight="normal">{item.title}</Text>
 
-                      <Spacer />
+                    <Spacer />
 
-                      {item.shortcut && <Code>{item.shortcut}</Code>}
-                    </HStack>
-                  </Button>
-                );
-              })}
-            </>
+                    {item.shortcut && <Code>{item.shortcut}</Code>}
+                  </HStack>
+                </Button>
+              );
+            })
           ) : (
             <Text> No result </Text>
           )}

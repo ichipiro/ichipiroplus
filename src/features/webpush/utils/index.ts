@@ -154,7 +154,7 @@ export function formatSubscriptionForApi(
   subscription: PushSubscription,
   settings?: {
     taskReminders?: boolean;
-    newArticles?: boolean;
+    lectureStarts?: boolean;
     systemNotices?: boolean;
   },
 ) {
@@ -174,8 +174,10 @@ export function formatSubscriptionForApi(
         task_reminders: settings.taskReminders,
       });
     }
-    if (settings.newArticles !== undefined) {
-      Object.assign(subscriptionData, { new_articles: settings.newArticles });
+    if (settings.lectureStarts !== undefined) {
+      Object.assign(subscriptionData, {
+        lecture_starts: settings.lectureStarts,
+      });
     }
     if (settings.systemNotices !== undefined) {
       Object.assign(subscriptionData, {

@@ -116,7 +116,7 @@ export function LectureImporter() {
             <Button
               leftIcon={<Upload />}
               onClick={() => fileInputRef.current?.click()}
-              isLoading={isValidating}
+              loading={isValidating}
               loadingText="検証中..."
               colorScheme="primary"
             >
@@ -154,7 +154,7 @@ export function LectureImporter() {
                       以下のエラーが見つかりました：
                     </AlertDescription>
                     <List mt={2} fontSize="sm">
-                      {validationResult.errors?.slice(0, 5).map((error) => (
+                      {validationResult.errors?.slice(0, 5).map(error => (
                         <ListItem key={error} color="red.600">
                           {error}
                         </ListItem>
@@ -183,7 +183,7 @@ export function LectureImporter() {
                 colorScheme="success"
                 leftIcon={<Check />}
                 onClick={handleImport}
-                isLoading={isImporting}
+                loading={isImporting}
                 loadingText="インポート中..."
               >
                 インポート実行
@@ -241,7 +241,7 @@ export function LectureImporter() {
                     エラー:
                   </Text>
                   <List fontSize="sm" mt={1}>
-                    {importResult.errors.slice(0, 5).map((error) => (
+                    {importResult.errors.slice(0, 5).map(error => (
                       <ListItem key={error} color="red.600">
                         {error}
                       </ListItem>

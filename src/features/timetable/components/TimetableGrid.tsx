@@ -7,9 +7,15 @@ import TimetableCell from "./TimetableCell";
 
 interface TimeTableGridProps {
   termId: string;
+  readonly?: boolean;
+  targetUserId?: string;
 }
 
-const TimeTableGrid = ({ termId }: TimeTableGridProps) => {
+const TimeTableGrid = ({
+  termId,
+  readonly = false,
+  targetUserId,
+}: TimeTableGridProps) => {
   return (
     <Grid
       templateColumns={{
@@ -35,28 +41,41 @@ const TimeTableGrid = ({ termId }: TimeTableGridProps) => {
         <React.Fragment key={time}>
           {DAYS.map(day => {
             const key = getScheduleKey(day, time);
-            return (
-              <Link href={`/timetable/${termId}/${key}`} key={key} passHref>
-                <GridItem
-                  bg={["white", "black"]}
-                  p={{ base: "md", md: "xs" }}
-                  border="1px solid"
-                  borderColor="gray.500"
-                  borderRadius="md"
-                  cursor="pointer"
-                  _hover={{ bg: ["gray.50", "gray.700"] }}
+            const cell = (
+              <GridItem
+                bg={["white", "black"]}
+                p={{ base: "md", md: "xs" }}
+                border="1px solid"
+                borderColor="gray.500"
+                borderRadius="md"
+                cursor={readonly ? "default" : "pointer"}
+                _hover={readonly ? undefined : { bg: ["gray.50", "gray.700"] }}
+                h="full"
+                w="full"
+              >
+                <VStack
                   h="full"
                   w="full"
+                  alignItems="center"
+                  justifyContent="center"
                 >
-                  <VStack
-                    h="full"
-                    w="full"
-                    alignItems="center"
-                    justifyContent="center"
-                  >
-                    <TimetableCell termId={termId} scheduleKey={key} />
-                  </VStack>
-                </GridItem>
+                  <TimetableCell
+                    termId={termId}
+                    scheduleKey={key}
+                    targetUserId={targetUserId}
+                    readonly={readonly}
+                  />
+                </VStack>
+              </GridItem>
+            );
+
+            if (readonly) {
+              return <React.Fragment key={key}>{cell}</React.Fragment>;
+            }
+
+            return (
+              <Link href={`/timetable/${termId}/${key}`} key={key} passHref>
+                {cell}
               </Link>
             );
           })}

@@ -11,7 +11,7 @@ const vapidDetails = {
 webpush.setVapidDetails(
   vapidDetails.subject,
   vapidDetails.publicKey as string,
-  vapidDetails.privateKey as string
+  vapidDetails.privateKey as string,
 );
 
 export { vapidDetails, webpush };

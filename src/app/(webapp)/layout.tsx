@@ -3,9 +3,11 @@ import MobileNav from "@/components/MobileNav";
 import { HStack, VStack } from "@yamada-ui/react";
 import type { ReactNode } from "react";
 
+export const dynamic = "force-dynamic";
+
 type WebappLayoutProps = {
   children?: ReactNode;
-  params?: unknown;
+  params?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const WebappLayout = ({ children }: WebappLayoutProps) => {
@@ -15,6 +17,7 @@ const WebappLayout = ({ children }: WebappLayoutProps) => {
       <MobileNav />
       <VStack
         w="full"
+        minW={0}
         h="full"
         gap={{ base: "lg", md: "sm" }}
         py={{ base: "lg", md: "sm" }}

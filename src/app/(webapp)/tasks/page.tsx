@@ -5,6 +5,8 @@ import { getMyRegistrations } from "@/features/timetable/actions/registrations";
 import { getCurrentTerm } from "@/features/timetable/actions/terms";
 import { Box, Heading, type SelectItem, VStack } from "@yamada-ui/react";
 
+export const dynamic = "force-dynamic";
+
 const TasksPage = async () => {
   const term = await getCurrentTerm();
   const tasks = await getMyTasks();

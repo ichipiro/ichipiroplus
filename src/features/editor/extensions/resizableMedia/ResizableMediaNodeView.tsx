@@ -86,7 +86,7 @@ export const ResizableMediaNodeView = ({
   }, [mediaType, node.attrs.widthPercent, updateAttributes]);
 
   // メディアロード時の処理
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies: legacy reason
   useEffect(() => {
     if (!mediaRef.current) return;
 
@@ -337,9 +337,8 @@ export const ResizableMediaNodeView = ({
                 transition="all 0.2s ease"
                 zIndex={20}
               >
-                {mediaActions.map((action, index) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-                  <Tooltip key={index} label={action.tooltip}>
+                {mediaActions.map(action => (
+                  <Tooltip key={action.tooltip} label={action.tooltip}>
                     <IconButton
                       aria-label={action.tooltip}
                       icon={action.icon}

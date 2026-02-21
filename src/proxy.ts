@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "./lib/auth";
 
-export default auth(async (req) => {
+export default auth(async req => {
   const { nextUrl, auth: session } = req;
   const isApiRoute = nextUrl.pathname.startsWith("/api");
   const isAuthRoute = nextUrl.pathname.startsWith("/auth");
@@ -45,5 +45,3 @@ export default auth(async (req) => {
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
-
-export const runtime = "nodejs";

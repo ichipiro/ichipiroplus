@@ -11,7 +11,6 @@ import {
   Button,
   FormControl,
   HStack,
-  Input,
   Select,
   type SelectItem,
   Tag,
@@ -33,18 +32,15 @@ export default function TermForm() {
     setState({ success: false, error: null });
 
     const formData = new FormData(event.currentTarget);
-    const yearValue = formData.get("year");
     const startDateValue = formData.get("startDate");
     const endDateValue = formData.get("endDate");
 
     console.log("Form values:", {
-      yearValue,
       selectedTerm,
       startDateValue,
       endDateValue,
     });
 
-    const year = Number(yearValue);
     const number = Number(selectedTerm);
     const startDate = new Date(startDateValue as string);
     const endDate = new Date(endDateValue as string);
@@ -56,11 +52,10 @@ export default function TermForm() {
       4: "第4ターム（冬）",
     };
 
-    const name = `${year}年度 ${termNames[number as keyof typeof termNames]}`;
+    const name = `${termNames[number as keyof typeof termNames]}`;
 
     try {
       await upsertTerm({
-        year,
         number,
         name,
         startDate,
@@ -122,27 +117,6 @@ export default function TermForm() {
         </Box>
 
         <HStack>
-          {/* 年度 */}
-          <FormControl
-            label="年度"
-            required
-            requiredIndicator={
-              <Tag size="sm" colorScheme="danger" ms={2}>
-                必須
-              </Tag>
-            }
-          >
-            <Input
-              name="year"
-              type="number"
-              placeholder="2024"
-              min={2020}
-              max={2100}
-              defaultValue={new Date().getFullYear()}
-              required
-            />
-          </FormControl>
-
           {/* ターム */}
           <FormControl
             label="ターム"

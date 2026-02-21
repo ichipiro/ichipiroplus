@@ -91,7 +91,7 @@ export const CustomHeading = Heading.extend({
     return [
       compositionPlugin,
       new Plugin({
-        appendTransaction: (transactions, oldState, newState) => {
+        appendTransaction: (_transactions, _oldState, newState) => {
           const compState = compositionPluginKey.getState(newState);
           if (compState?.composing) {
             return null;

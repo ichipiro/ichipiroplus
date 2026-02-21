@@ -2,11 +2,14 @@
 
 import {
   type TaskFormData,
-  TaskPriority,
-  type TaskPriorityType,
   TaskStatus,
   taskFormSchema,
 } from "@/features/task/types";
+import {
+  DEFAULT_TASK_REMINDER_OFFSETS,
+  TASK_DUE_HOURS,
+  TASK_DUE_MINUTES,
+} from "../constants";
 import useActionFeedback from "@/hooks/useActionFeedback";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@yamada-ui/calendar";
@@ -14,25 +17,24 @@ import {
   Box,
   Button,
   FormControl,
+  HStack,
   Input,
-  Radio,
-  RadioGroup,
   Select,
   type SelectItem,
   Tag,
+  Text,
   Textarea,
   VStack,
 } from "@yamada-ui/react";
 import "dayjs/locale/ja";
+import { useState } from "react";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
 
 interface CreateTaskFormProps {
   onSuccess?: () => void;
   lectureItems?: SelectItem[];
   defaultRegistrationId?: string;
-  onCreate: (
-    data: Omit<TaskFormData, "status">,
-  ) => Promise<unknown>;
+  onCreate: (data: Omit<TaskFormData, "status">) => Promise<unknown>;
   isPending?: boolean;
 }
 
@@ -44,6 +46,15 @@ const CreateTaskForm = ({
   isPending = false,
 }: CreateTaskFormProps) => {
   const { withFeedback } = useActionFeedback();
+  const [dueTime, setDueTime] = useState("09:00");
+  const hourItems: SelectItem[] = TASK_DUE_HOURS.map(value => ({
+    value,
+    label: `${value}時`,
+  }));
+  const minuteItems: SelectItem[] = TASK_DUE_MINUTES.map(value => ({
+    value,
+    label: `${value}分`,
+  }));
 
   const {
     register,
@@ -57,8 +68,8 @@ const CreateTaskForm = ({
       title: "",
       description: "",
       registrationId: defaultRegistrationId,
-      priority: TaskPriority.LOW,
-      status: TaskStatus.TODO,
+      status: TaskStatus.INCOMPLETE,
+      reminderOffsets: DEFAULT_TASK_REMINDER_OFFSETS,
     },
   });
 
@@ -66,15 +77,26 @@ const CreateTaskForm = ({
     const registrationId =
       data.registrationId === undefined
         ? defaultRegistrationId
-        : data.registrationId ?? undefined;
+        : (data.registrationId ?? undefined);
+
+    const resolvedDueDate = data.dueDate
+      ? (() => {
+          const [hoursRaw, minutesRaw] = dueTime.split(":");
+          const nextDate = new Date(data.dueDate as Date);
+          nextDate.setHours(Number(hoursRaw) || 9);
+          nextDate.setMinutes(Number(minutesRaw) || 0);
+          nextDate.setSeconds(0, 0);
+          return nextDate;
+        })()
+      : undefined;
 
     const result = await withFeedback(
       onCreate({
         title: data.title,
         description: data.description,
-        priority: data.priority as TaskPriorityType,
-        dueDate: data.dueDate || undefined,
+        dueDate: resolvedDueDate,
         registrationId,
+        reminderOffsets: data.reminderOffsets,
       }),
       {
         successMessage: "新しいタスクを作成しました",
@@ -139,37 +161,43 @@ const CreateTaskForm = ({
         </FormControl>
 
         <FormControl label="期限" invalid={!!errors.dueDate}>
-          <Controller
-            name="dueDate"
-            control={control}
-            render={({ field }) => (
-              <DatePicker
-                placeholder="YYYY/MM/DD"
-                {...field}
-                value={field.value || undefined}
-                onChange={value => field.onChange(value)}
+          <VStack align="stretch">
+            <Controller
+              name="dueDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  placeholder="YYYY/MM/DD"
+                  {...field}
+                  value={field.value || undefined}
+                  onChange={value => field.onChange(value)}
+                />
+              )}
+            />
+            <HStack gap={1}>
+              <Select
+                items={hourItems}
+                value={dueTime.split(":")[0] || "09"}
+                onChange={value => {
+                  const [, minute = "00"] = dueTime.split(":");
+                  setDueTime(`${value || "09"}:${minute}`);
+                }}
+                portalProps={{ disabled: true }}
+                w={{ base: "6.5rem", sm: "5.5rem" }}
               />
-            )}
-          />
-        </FormControl>
-
-        <FormControl label="優先度" invalid={!!errors.priority}>
-          <Controller
-            name="priority"
-            control={control}
-            render={({ field }) => (
-              <RadioGroup
-                direction="row"
-                {...field}
-                value={String(field.value)}
-                onChange={value => field.onChange(Number(value))}
-              >
-                <Radio value={String(TaskPriority.LOW)}>低</Radio>
-                <Radio value={String(TaskPriority.MEDIUM)}>中</Radio>
-                <Radio value={String(TaskPriority.HIGH)}>高</Radio>
-              </RadioGroup>
-            )}
-          />
+              <Text fontSize="sm">:</Text>
+              <Select
+                items={minuteItems}
+                value={dueTime.split(":")[1] || "00"}
+                onChange={value => {
+                  const [hour = "09"] = dueTime.split(":");
+                  setDueTime(`${hour}:${value || "00"}`);
+                }}
+                portalProps={{ disabled: true }}
+                w={{ base: "6.5rem", sm: "5.5rem" }}
+              />
+            </HStack>
+          </VStack>
         </FormControl>
 
         <Button

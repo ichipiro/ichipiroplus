@@ -1,206 +1,305 @@
 "use client";
 
-import {
-  TaskPriority,
-  TaskStatus,
-  type TaskStatusType,
-} from "@/features/task/types";
 import useActionFeedback from "@/hooks/useActionFeedback";
-import { format } from "@formkit/tempo";
 import type { Task } from "@prisma/client";
+import { CircleCheckBigIcon, CircleIcon, Trash2Icon } from "@yamada-ui/lucide";
 import {
-  CircleCheckBigIcon,
-  CircleIcon,
-  EllipsisIcon,
-} from "@yamada-ui/lucide";
-import {
-  Badge,
   Box,
-  Flex,
   HStack,
   IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-  Stack,
+  Input,
+  type SelectItem,
   Text,
-  Tooltip,
+  Textarea,
   VStack,
 } from "@yamada-ui/react";
-import type { ReactNode } from "react";
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import TaskMetaRow from "./task-item/TaskMetaRow";
+import TaskReminderSection from "./task-item/TaskReminderSection";
+import { useTaskItemDraft } from "./task-item/useTaskItemDraft";
 
 interface TaskItemProps {
   task: Task;
-  showLecture?: boolean;
   isPending: boolean;
-  onUpdateStatus: (taskId: string, status: TaskStatusType) => Promise<Task>;
-  onEdit: (task: Task) => void;
-  onDelete: (task: Task) => void;
-  registrationLabel?: ReactNode;
+  lectureItems?: SelectItem[];
+  registrationLabel?: string;
+  autoEdit?: boolean;
+  onAutoEditConsumed?: () => void;
+  onUpdate: (
+    taskId: string,
+    data: {
+      title?: string;
+      description?: string;
+      dueDate?: Date;
+      reminderOffsets?: number[];
+      registrationId?: string | null;
+    },
+  ) => Promise<Task>;
+  onToggleCompleted: (taskId: string) => Promise<Task | null>;
+  onDelete: (taskId: string) => Promise<void>;
 }
+
+const CLICK_INSIDE_OVERLAY_SELECTOR = [
+  '[role="listbox"]',
+  '[role="option"]',
+  '[role="combobox"]',
+  ".ui-select",
+  ".ui-multi-select",
+  ".ui-datepicker",
+  ".ui-popover",
+].join(",");
 
 const TaskItem = ({
   task,
-  showLecture = true,
   isPending,
-  onUpdateStatus,
-  onEdit,
-  onDelete,
+  lectureItems,
   registrationLabel,
+  autoEdit = false,
+  onAutoEditConsumed,
+  onUpdate,
+  onToggleCompleted,
+  onDelete,
 }: TaskItemProps) => {
   const { withFeedback } = useActionFeedback();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const handleToggleStatus = async () => {
+  const {
+    title,
+    description,
+    registrationId,
+    dueDate,
+    dueTime,
+    reminderOffsets,
+    formattedDueDate,
+    hasChanges,
+    orderedReminderOffsets,
+    setTitle,
+    setDescription,
+    setRegistrationId,
+    setDueDateByPicker,
+    setDueHour,
+    setDueMinute,
+    toggleReminderOffset,
+  } = useTaskItemDraft(task);
+
+  useEffect(() => {
+    if (!autoEdit) return;
+    setIsEditing(true);
+    onAutoEditConsumed?.();
+  }, [autoEdit, onAutoEditConsumed]);
+
+  const isCompleted = task.status === 2;
+
+  const handleToggleCompleted = async (event: MouseEvent) => {
+    event.stopPropagation();
     if (isPending) return;
-    const newStatus =
-      task.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE;
-    await withFeedback(onUpdateStatus(task.id, newStatus), {
-      successMessage: "タスクのステータスを更新しました",
-      successTitle: "ステータス更新",
+
+    await withFeedback(onToggleCompleted(task.id), {
+      successMessage: isCompleted ? "未完了に戻しました" : "完了にしました",
+      successTitle: "タスク更新",
     });
   };
 
-  const handleUpdateToStatus = async (status: TaskStatusType) => {
-    if (isPending || task.status === status) return;
-    await withFeedback(onUpdateStatus(task.id, status), {
-      successMessage: "タスクのステータスを更新しました",
-      successTitle: "ステータス更新",
+  const saveIfChanged = useCallback(async () => {
+    if (!isEditing || isPending) return;
+
+    const normalizedTitle = title.trim() || task.title;
+
+    if (!hasChanges && normalizedTitle === task.title) {
+      setIsEditing(false);
+      return;
+    }
+
+    const result = await withFeedback(
+      (() => {
+        const resolvedRegistrationId =
+          registrationId === undefined && task.registrationId
+            ? null
+            : registrationId;
+
+        return onUpdate(task.id, {
+          title: normalizedTitle,
+          description,
+          dueDate,
+          reminderOffsets,
+          registrationId: resolvedRegistrationId,
+        });
+      })(),
+      {
+        errorTitle: "タスク更新",
+      },
+    );
+
+    if (result) {
+      setIsEditing(false);
+    }
+  }, [
+    description,
+    dueDate,
+    hasChanges,
+    isEditing,
+    isPending,
+    onUpdate,
+    registrationId,
+    reminderOffsets,
+    task.id,
+    task.registrationId,
+    task.title,
+    title,
+    withFeedback,
+  ]);
+
+  const handleDelete = async () => {
+    if (isPending) return;
+
+    await withFeedback(onDelete(task.id), {
+      successMessage: "タスクを削除しました",
+      successTitle: "タスク削除",
     });
   };
 
-  const priorityColor =
-    {
-      [TaskPriority.LOW]: "green",
-      [TaskPriority.MEDIUM]: "blue",
-      [TaskPriority.HIGH]: "red",
-    }[task.priority] || "gray";
+  const enterEditMode = () => {
+    if (isPending || isEditing) return;
+    setIsEditing(true);
+  };
 
-  const isCompleted = task.status === TaskStatus.DONE;
-  const formattedDueDate = task.dueDate
-    ? format(task.dueDate, "short", "ja")
-    : null;
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleDocumentClick = (event: MouseEvent | globalThis.MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+
+      const element = target instanceof Element ? target : target.parentElement;
+      if (element?.closest(CLICK_INSIDE_OVERLAY_SELECTOR)) return;
+
+      if (rootRef.current?.contains(target)) return;
+      void saveIfChanged();
+    };
+
+    document.addEventListener("click", handleDocumentClick);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
+    };
+  }, [isEditing, saveIfChanged]);
 
   return (
     <Box
-      p={3}
+      ref={rootRef}
+      position="relative"
       borderWidth="1px"
       borderRadius="md"
-      borderLeftWidth="4px"
-      borderLeftColor={`${priorityColor}.500`}
       bg={["white", "black"]}
-      opacity={isCompleted ? 0.7 : 1}
-      _hover={{ shadow: "sm" }}
-      transition="all 0.2s"
-      position="relative"
+      opacity={isCompleted ? 0.75 : 1}
+      p={3}
+      pr={11}
+      cursor={isEditing ? "default" : "pointer"}
+      overflow="visible"
+      onClick={enterEditMode}
     >
-      <Box position="absolute" top="8px" right="8px">
-        <Menu>
-          <MenuButton
-            as={IconButton}
-            aria-label="タスクの操作"
-            icon={<EllipsisIcon />}
-            size="sm"
-            variant="ghost"
-          />
-          <MenuList>
-            <MenuItem
-              onClick={() => handleUpdateToStatus(TaskStatus.TODO)}
-              isDisabled={task.status === TaskStatus.TODO || isPending}
-            >
-              未着手に移動
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleUpdateToStatus(TaskStatus.IN_PROGRESS)}
-              isDisabled={task.status === TaskStatus.IN_PROGRESS || isPending}
-            >
-              進行中に移動
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleUpdateToStatus(TaskStatus.DONE)}
-              isDisabled={task.status === TaskStatus.DONE || isPending}
-            >
-              完了に移動
-            </MenuItem>
-            <MenuItem onClick={() => onEdit(task)}>編集</MenuItem>
-            <MenuItem onClick={() => onDelete(task)} color="red.500">
-              削除
-            </MenuItem>
-          </MenuList>
-        </Menu>
-      </Box>
+      <IconButton
+        aria-label="タスクを削除"
+        icon={<Trash2Icon size="sm" />}
+        size="xs"
+        colorScheme="red"
+        variant="ghost"
+        position="absolute"
+        top={2}
+        right={2}
+        onClick={event => {
+          event.stopPropagation();
+          void handleDelete();
+        }}
+        disabled={isPending}
+      />
 
-      <Stack direction={{ base: "column", md: "row" }}>
-        <HStack alignItems="flex-start" flex={1}>
-          <Tooltip
-            label={isCompleted ? "タスクを未完了にする" : "タスクを完了する"}
-          >
-            <IconButton
-              aria-label={
-                isCompleted ? "タスクを未完了にする" : "タスクを完了する"
-              }
-              icon={isCompleted ? <CircleCheckBigIcon /> : <CircleIcon />}
-              variant="ghost"
-              colorScheme={isCompleted ? "green" : "gray"}
+      <HStack align="start" gap={3} minW={0}>
+        <IconButton
+          aria-label={isCompleted ? "未完了に戻す" : "完了にする"}
+          icon={isCompleted ? <CircleCheckBigIcon /> : <CircleIcon />}
+          variant="ghost"
+          colorScheme={isCompleted ? "green" : "gray"}
+          size="sm"
+          onClick={handleToggleCompleted}
+          loading={isPending}
+          mt={0.5}
+          flexShrink={0}
+        />
+
+        <VStack align="stretch" flex={1} minW={0} gap={2}>
+          {isEditing ? (
+            <Input
+              value={title}
+              onChange={event => setTitle(event.target.value)}
+              fontWeight="medium"
               size="sm"
-              isLoading={isPending}
-              onClick={handleToggleStatus}
+              onClick={event => event.stopPropagation()}
             />
-          </Tooltip>
-
-          <VStack align="start" flex={1}>
-            <Stack w="full" direction={{ base: "row", md: "column" }}>
-              <Text
-                fontWeight="medium"
-                textDecoration={isCompleted ? "line-through" : "none"}
-                color={isCompleted ? "gray.500" : "inherit"}
-              >
-                {task.title}
-              </Text>
-
-              {showLecture && task.registrationId && (
-                <Badge
-                  colorScheme="purple"
-                  variant="subtle"
-                  alignSelf={{ base: "flex-start" }}
-                >
-                  {registrationLabel ?? "講義"}
-                </Badge>
-              )}
-            </Stack>
-
-            {task.description && (
-              <Text
-                fontSize="sm"
-                color={isCompleted ? "gray.400" : "gray.600"}
-                textDecoration={isCompleted ? "line-through" : "none"}
-              >
-                {task.description}
-              </Text>
-            )}
-
-            <Flex
-              fontSize="xs"
-              color="gray.500"
-              direction={{ base: "column", md: "row" }}
-              align={{ base: "flex-start", md: "center" }}
-              gap={1}
+          ) : (
+            <Text
+              fontWeight="medium"
+              fontSize="md"
+              textDecoration={isCompleted ? "line-through" : "none"}
+              color={isCompleted ? "gray.500" : "inherit"}
+              lineClamp={2}
+              wordBreak="break-word"
             >
-              {formattedDueDate && <Text>期限: {formattedDueDate}</Text>}
-              <Text>
-                優先度:
-                <Badge ml={1} colorScheme={priorityColor} variant="subtle">
-                  {task.priority === TaskPriority.LOW
-                    ? "低"
-                    : task.priority === TaskPriority.MEDIUM
-                      ? "中"
-                      : "高"}
-                </Badge>
-              </Text>
-            </Flex>
-          </VStack>
-        </HStack>
-      </Stack>
+              {task.title}
+            </Text>
+          )}
+
+          {isEditing ? (
+            <Textarea
+              value={description}
+              onChange={event => setDescription(event.target.value)}
+              placeholder="詳細を入力"
+              rows={2}
+              size="sm"
+              onClick={event => event.stopPropagation()}
+            />
+          ) : (
+            <Text
+              fontSize="sm"
+              color={isCompleted ? "gray.400" : "gray.600"}
+              minH={description ? undefined : "1.25rem"}
+              lineClamp={2}
+              wordBreak="break-word"
+            >
+              {description || "詳細なし"}
+            </Text>
+          )}
+
+          <TaskMetaRow
+            isEditing={isEditing}
+            dueDate={dueDate}
+            dueTime={dueTime}
+            formattedDueDate={formattedDueDate}
+            lectureItems={lectureItems}
+            registrationId={registrationId}
+            registrationLabel={registrationLabel}
+            onDueDateChange={setDueDateByPicker}
+            onDueHourChange={setDueHour}
+            onDueMinuteChange={setDueMinute}
+            onRegistrationChange={setRegistrationId}
+          />
+
+          <TaskReminderSection
+            isEditing={isEditing}
+            reminderOffsets={reminderOffsets}
+            orderedReminderOffsets={orderedReminderOffsets}
+            onToggleOffset={toggleReminderOffset}
+          />
+
+          <HStack justify="flex-end" pt={1} />
+        </VStack>
+      </HStack>
     </Box>
   );
 };

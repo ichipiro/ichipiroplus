@@ -46,6 +46,7 @@ const LectureDetail = async ({ tab, registration }: LectureDetailPageProps) => {
         <TasksDashboard
           initialTasks={tasks}
           registrationId={String(registration.id)}
+          fixedRegistrationLabel={lecture.name}
         />
       )}
 

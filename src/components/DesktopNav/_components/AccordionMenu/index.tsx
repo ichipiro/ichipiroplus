@@ -18,6 +18,8 @@ interface AccordionMenuProps {
   pathname: string;
 }
 
+const EmptyAccordionIcon = () => null;
+
 const getDefaultIndexes = (
   items: NavMenuItem[],
   pathname: string,
@@ -66,20 +68,29 @@ const AccordionMenu = ({ navItems, pathname }: AccordionMenuProps) => {
                   icon={icon}
                   href={href}
                   isHighlight={pathname === href}
-                  onClick={() => onChange(idx)}
+                  onClick={() => {
+                    if (children && children.length > 0) {
+                      onChange(idx);
+                    }
+                  }}
                 />
               }
-              icon={({ expanded }) => {
-                const Icon = expanded ? ChevronDownIcon : ChevronRightIcon;
-
-                if (!children || children.length === 0) {
-                  return <></>;
-                }
-
-                return <Icon color={["blackAlpha.800", "whiteAlpha.700"]} />;
-              }}
+              icon={
+                children && children.length > 0 ? (
+                  ({ isExpanded }) => {
+                    const Icon = isExpanded
+                      ? ChevronDownIcon
+                      : ChevronRightIcon;
+                    return (
+                      <Icon color={["blackAlpha.800", "whiteAlpha.700"]} />
+                    );
+                  }
+                ) : (
+                  <EmptyAccordionIcon />
+                )
+              }
             >
-              {children && (
+              {children && children.length > 0 && (
                 <AccordionPanel
                   borderLeft="1px solid"
                   borderColor="gray.200"

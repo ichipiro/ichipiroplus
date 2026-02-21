@@ -2,6 +2,7 @@
 
 import type { TermFormData } from "@/features/timetable/types";
 import { checkAdminAccess } from "@/lib/admin";
+import { BadRequestError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -13,23 +14,19 @@ export async function upsertTerm(data: TermFormData) {
 
   // 基本バリデーション
   if (data.endDate <= data.startDate) {
-    throw new Error("終了日は開始日より後である必要があります");
+    throw new BadRequestError("終了日は開始日より後である必要があります");
   }
 
-  // 同じ年度・ターム番号の既存データを確認
+  // 同じターム番号の既存データを確認
   const existing = await prisma.term.findUnique({
     where: {
-      year_number: {
-        year: data.year,
-        number: data.number,
-      },
+      number: data.number,
     },
   });
 
   // 期間重複チェック
   const overlapping = await prisma.term.findMany({
     where: {
-      year: data.year,
       ...(existing && { id: { not: existing.id } }),
       OR: [
         // 新しい開始日が既存期間内にある
@@ -59,7 +56,9 @@ export async function upsertTerm(data: TermFormData) {
 
   if (overlapping.length > 0) {
     const overlappingNames = overlapping.map(term => term.name).join(", ");
-    throw new Error(`期間が重複している学期があります: ${overlappingNames}`);
+    throw new BadRequestError(
+      `期間が重複している学期があります: ${overlappingNames}`,
+    );
   }
 
   // アクティブ期間の重複チェック（現在時刻での判定）
@@ -77,7 +76,7 @@ export async function upsertTerm(data: TermFormData) {
 
     if (currentlyActive.length > 0) {
       const activeNames = currentlyActive.map(term => term.name).join(", ");
-      throw new Error(
+      throw new BadRequestError(
         `既にアクティブな学期があります: ${activeNames}。期間が重複しないようにしてください。`,
       );
     }
@@ -100,7 +99,6 @@ export async function upsertTerm(data: TermFormData) {
   // 新規作成
   const created = await prisma.term.create({
     data: {
-      year: data.year,
       number: data.number,
       name: data.name,
       startDate: data.startDate,
@@ -118,17 +116,6 @@ export async function upsertTerm(data: TermFormData) {
 export async function deleteTerm(termId: string) {
   await checkAdminAccess();
 
-  // 登録データがある場合は削除不可
-  const registrationCount = await prisma.registration.count({
-    where: { termId },
-  });
-
-  if (registrationCount > 0) {
-    throw new Error(
-      `この学期には ${registrationCount} 件の登録データがあるため削除できません`,
-    );
-  }
-
   await prisma.term.delete({
     where: { id: termId },
   });
@@ -140,7 +127,6 @@ export async function deleteTerm(termId: string) {
  * 学期期間の重複チェック
  */
 export async function validateTermDates(
-  year: number,
   number: number,
   startDate: Date,
   endDate: Date,
@@ -151,7 +137,7 @@ export async function validateTermDates(
   // 同じ年度内で期間が重複する学期をチェック
   const overlapping = await prisma.term.findMany({
     where: {
-      year,
+      number,
       ...(excludeId && { id: { not: excludeId } }),
       OR: [
         // 新しい開始日が既存期間内にある

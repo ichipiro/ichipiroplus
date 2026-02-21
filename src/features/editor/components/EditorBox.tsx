@@ -12,10 +12,10 @@ const EditorBox = ({ editor, children, ...props }: EditorBoxProps) => {
   const [isDragActive, setIsDragActive] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  const getEditorView = () => {
+  const getEditorView = useCallback(() => {
     if (!editor || editor.isDestroyed) return null;
     return editor.view;
-  };
+  }, [editor]);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     const hasFiles = e.dataTransfer.types.includes("Files");
@@ -53,7 +53,6 @@ const EditorBox = ({ editor, children, ...props }: EditorBoxProps) => {
     e.stopPropagation();
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       const hasFiles =
@@ -85,7 +84,6 @@ const EditorBox = ({ editor, children, ...props }: EditorBoxProps) => {
       if (!pos) {
         const endPos = editor.state.doc.content.size;
 
-        // biome-ignore lint/complexity/noForEach: <explanation>
         imagesAndVideos.forEach(async file => {
           const uploadFn = editor.storage.resizableMedia?.uploadFn;
 
@@ -112,7 +110,6 @@ const EditorBox = ({ editor, children, ...props }: EditorBoxProps) => {
           }
         });
       } else {
-        // biome-ignore lint/complexity/noForEach: <explanation>
         imagesAndVideos.forEach(async file => {
           const uploadFn = editor.storage.resizableMedia?.uploadFn;
 
@@ -140,7 +137,7 @@ const EditorBox = ({ editor, children, ...props }: EditorBoxProps) => {
         });
       }
     },
-    [editor],
+    [editor, getEditorView],
   );
 
   const borderStyle = isDragActive

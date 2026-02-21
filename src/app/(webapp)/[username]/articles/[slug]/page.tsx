@@ -6,23 +6,24 @@ import { Separator } from "@yamada-ui/react";
 import { notFound } from "next/navigation";
 
 interface ArticlePageProps {
-  params: {
+  params: Promise<{
     username: string;
     slug: string;
-  };
+  }>;
 }
 
 const ArticlePage = async ({ params }: ArticlePageProps) => {
-  const { username, slug } = params;
+  const { username, slug } = await params;
 
-  const article = await getArticle(slug);
-  const author = await getUserByUsername(username);
+  const [article, author, currentUserProfile] = await Promise.all([
+    getArticle(slug),
+    getUserByUsername(username),
+    getCurrentUser(),
+  ]);
 
   if (!article || !author) {
     notFound();
   }
-
-  const currentUserProfile = await getCurrentUser();
 
   // アクセス権のチェック
   if (

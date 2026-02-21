@@ -29,7 +29,7 @@ const IconUploadField = ({
   errorMessage,
 }: IconUploadFieldProps) => {
   const [isPending, startTransition] = useTransition();
-  const { withFeedback } = useActionFeedback();
+  const { withFeedback, showError } = useActionFeedback();
 
   const {
     field: { onChange, value },
@@ -46,7 +46,6 @@ const IconUploadField = ({
 
     // ファイルタイプのバリデーション
     if (!file.type.startsWith("image/")) {
-      const { showError } = useActionFeedback();
       showError(new Error("画像ファイルを選択してください"));
       return;
     }

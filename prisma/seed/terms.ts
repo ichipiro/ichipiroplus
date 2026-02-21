@@ -7,29 +7,25 @@ export const seedTerms = async (prisma: PrismaClient) => {
 
   const terms = [
     {
-      name: `${currentYear}年度 第1ターム`,
-      year: currentYear,
+      name: "第1ターム",
       number: 1,
       startDate: new Date(currentYear, 4, 8), // 4月8日
       endDate: new Date(currentYear, 6, 6),
     },
     {
-      name: `${currentYear}年度 第2ターム`,
-      year: currentYear,
+      name: "第2ターム",
       number: 2,
       startDate: new Date(currentYear, 6, 7), // 6月7日
       endDate: new Date(currentYear, 8, 8), // 8月8日
     },
     {
-      name: `${currentYear}年度 第3ターム`,
-      year: currentYear,
+      name: "第3ターム",
       number: 3,
       startDate: new Date(currentYear, 10, 1), // 10月1日
       endDate: new Date(currentYear, 11, 27), // 11月27日
     },
     {
-      name: `${currentYear}年度 第4ターム`,
-      year: currentYear,
+      name: "第4ターム",
       number: 4,
       startDate: new Date(currentYear, 11, 28), // 11月28日
       endDate: new Date(currentYear + 1, 2, 5), // 2月5日
@@ -39,10 +35,7 @@ export const seedTerms = async (prisma: PrismaClient) => {
   for (const termData of terms) {
     const term = await prisma.term.upsert({
       where: {
-        year_number: {
-          year: termData.year,
-          number: termData.number,
-        },
+        number: termData.number,
       },
       update: {},
       create: termData,

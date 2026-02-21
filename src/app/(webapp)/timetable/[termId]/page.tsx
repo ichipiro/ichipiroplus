@@ -1,33 +1,78 @@
 import { getTerm } from "@/features/timetable/actions/terms";
 import TimetableGrid from "@/features/timetable/components/TimetableGrid";
 import TimetablePicker from "@/features/timetable/components/TimetablePicker";
-import { Box, HStack, Heading, VStack } from "@yamada-ui/react";
+import {
+  Box,
+  HStack,
+  Heading,
+  SimpleGrid,
+  Text,
+  VStack,
+} from "@yamada-ui/react";
+import Link from "next/link";
 
 interface TimeTablePageProps {
-  params: {
+  params: Promise<{
     termId: string;
-  };
+  }>;
 }
 
 const TimeTablePage = async ({ params }: TimeTablePageProps) => {
-  const term = await getTerm(params.termId);
+  const { termId } = await params;
+  const term = await getTerm(termId);
 
   return (
     <VStack alignItems="center" gap={4}>
       {/* ヘッダー部分 */}
       <Box w="full" maxW="1200px">
         <HStack justify="space-between" mb={4}>
-          <Heading size="lg">
-            {term.year}年度 第{term.number}ターム
-          </Heading>
+          <Heading size="lg">第{term.number}ターム</Heading>
         </HStack>
       </Box>
 
       {/* 年度・ターム選択 */}
       <TimetablePicker nowTerm={term} />
 
+      {/* モバイル向け関連機能リンク */}
+      <Box w="full" maxW="1200px" display={{ base: "none", md: "block" }}>
+        <Heading size="sm" mb={2}>
+          関連機能
+        </Heading>
+        <SimpleGrid columns={2} gap={3}>
+          <Link href="/lectures" style={{ textDecoration: "none" }}>
+            <Box
+              p={3}
+              borderWidth="1px"
+              borderRadius="md"
+              bg={["white", "gray.800"]}
+              _hover={{ shadow: "sm" }}
+            >
+              <Text fontWeight="medium">講義検索</Text>
+              <Text fontSize="sm" color="gray.500">
+                全講義一覧から講義を探す
+              </Text>
+            </Box>
+          </Link>
+
+          <Link href="/lectures/new" style={{ textDecoration: "none" }}>
+            <Box
+              p={3}
+              borderWidth="1px"
+              borderRadius="md"
+              bg={["white", "gray.800"]}
+              _hover={{ shadow: "sm" }}
+            >
+              <Text fontWeight="medium">講義追加</Text>
+              <Text fontSize="sm" color="gray.500">
+                自主ゼミやサークル予定を登録
+              </Text>
+            </Box>
+          </Link>
+        </SimpleGrid>
+      </Box>
+
       {/* 時間割グリッド */}
-      <TimetableGrid termId={params.termId} />
+      <TimetableGrid termId={termId} />
     </VStack>
   );
 };

@@ -1,7 +1,11 @@
 // RegistrationSteps.tsx
 "use client";
 
-import type { Department, Faculty, UserWithRelations } from "@/features/user/types";
+import type {
+  Department,
+  Faculty,
+  UserWithRelations,
+} from "@/features/user/types";
 import RegistrationStepper from "../RegistrationStepper";
 import StepIntro from "../StepIntro";
 import StepProfile from "../StepProfile";

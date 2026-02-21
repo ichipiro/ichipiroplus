@@ -72,10 +72,9 @@ export const seedLectures = async (prisma: PrismaClient) => {
         isExam: item.is_exam,
         ownerId: "system", // シード元識別
         sourceType: "scraped",
-        termNumbers: item.terms,
       } as const;
 
-      await tx.lecture.upsert({
+      const lecture = await tx.lecture.upsert({
         where: { syllabusCode: item.id },
         create: {
           ...data,
@@ -88,6 +87,20 @@ export const seedLectures = async (prisma: PrismaClient) => {
           departments: { set: departments.map(d => ({ id: d.id })) },
         },
       });
+
+      await tx.lectureTerm.deleteMany({
+        where: { lectureId: lecture.id },
+      });
+
+      if (item.terms.length > 0) {
+        await tx.lectureTerm.createMany({
+          data: item.terms.map(termNumber => ({
+            lectureId: lecture.id,
+            termNumber,
+          })),
+          skipDuplicates: true,
+        });
+      }
     }
   });
 
