@@ -32,6 +32,7 @@ import {
   VStack,
 } from "@yamada-ui/react";
 import { useMemo, useState } from "react";
+import { DEFAULT_TASK_REMINDER_OFFSETS } from "../constants";
 import { useTaskBoard } from "../hooks/useTaskBoard";
 import { type TaskStatusType, TaskStatus } from "../types";
 import TaskItem from "./TaskItem";
@@ -56,7 +57,8 @@ type SortableTaskItemProps = {
       title?: string;
       description?: string;
       dueDate?: Date;
-      registrationId?: string;
+      reminderOffsets?: number[];
+      registrationId?: string | null;
     },
   ) => Promise<Task>;
   onToggleCompleted: (taskId: string) => Promise<Task | null>;
@@ -177,6 +179,7 @@ const TasksDashboard = ({
         title: "新しいタスク",
         description: "",
         dueDate: undefined,
+        reminderOffsets: DEFAULT_TASK_REMINDER_OFFSETS,
         registrationId,
       }),
       {
@@ -227,6 +230,7 @@ const TasksDashboard = ({
 
   return (
     <DndContext
+      id="tasks-dnd-context"
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}

@@ -7,7 +7,7 @@
  */
 export interface NotificationSettings {
   taskReminders: boolean;
-  newArticles: boolean;
+  lectureStarts: boolean;
   systemNotices: boolean;
 }
 
@@ -18,7 +18,7 @@ export interface PushSubscriptionInfo {
   id: string;
   endpoint: string;
   task_reminders: boolean;
-  new_articles: boolean;
+  lecture_starts: boolean;
   system_notices: boolean;
   created_at: string;
   updated_at: string;
@@ -34,7 +34,7 @@ export interface PushSubscriptionRequest {
     auth: string;
   };
   task_reminders?: boolean;
-  new_articles?: boolean;
+  lecture_starts?: boolean;
   system_notices?: boolean;
 }
 
@@ -53,7 +53,7 @@ export interface PushSubscriptionResponse {
 export interface NotificationSettingsUpdateRequest {
   endpoint: string;
   task_reminders?: boolean;
-  new_articles?: boolean;
+  lecture_starts?: boolean;
   system_notices?: boolean;
 }
 

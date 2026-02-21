@@ -4,6 +4,7 @@ import { getMe } from "@/features/user/actions";
 import { NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import type { Task } from "@prisma/client";
+import { normalizeTaskReminderOffsets } from "../constants";
 import type { CreateTaskData, TaskStatusType, UpdateTaskData } from "../types";
 import { TaskStatus } from "../types";
 
@@ -29,7 +30,7 @@ const getTopSortOrder = async (userId: string, status: TaskStatusType) => {
 
 export const getMyTasks = async (
   status?: TaskStatusType,
-  registrationId?: string,
+  registrationId?: string | null,
 ): Promise<Task[]> => {
   const userId = await getMe();
 
@@ -37,7 +38,8 @@ export const getMyTasks = async (
     where: {
       userId,
       ...(status && { status }),
-      ...(registrationId && { registrationId }),
+      ...(registrationId !== undefined &&
+        registrationId !== null && { registrationId }),
     },
     orderBy: [
       { status: "asc" },
@@ -88,6 +90,7 @@ export const createTask = async (data: CreateTaskData): Promise<Task> => {
       title: data.title,
       description: data.description,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      reminderOffsets: normalizeTaskReminderOffsets(data.reminderOffsets),
       status: TaskStatus.INCOMPLETE,
       sortOrder: topSortOrder,
       userId,
@@ -115,7 +118,11 @@ export const updateTask = async (
     throw new NotFoundError("タスク");
   }
 
-  if (data.registrationId && data.registrationId !== existing.registrationId) {
+  if (
+    data.registrationId !== undefined &&
+    data.registrationId !== null &&
+    data.registrationId !== existing.registrationId
+  ) {
     const registration = await prisma.registration.findFirst({
       where: {
         id: data.registrationId,
@@ -141,10 +148,13 @@ export const updateTask = async (
       ...(data.dueDate !== undefined && {
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
       }),
+      ...(data.reminderOffsets !== undefined && {
+        reminderOffsets: normalizeTaskReminderOffsets(data.reminderOffsets),
+      }),
       ...(data.status !== undefined && { status: data.status }),
       ...(sortOrderToUpdate !== undefined && { sortOrder: sortOrderToUpdate }),
       ...(data.registrationId !== undefined && {
-        registrationId: data.registrationId,
+        registrationId: data.registrationId ?? null,
       }),
     },
   });

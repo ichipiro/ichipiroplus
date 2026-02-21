@@ -63,13 +63,14 @@ export const useTaskBoard = ({
         const resolvedRegistrationId =
           data.registrationId === undefined
             ? registrationId
-            : data.registrationId || undefined;
+            : (data.registrationId ?? undefined);
 
         const newTask = await createTaskAction({
           title: data.title,
           description: data.description,
           dueDate: data.dueDate || undefined,
           registrationId: resolvedRegistrationId,
+          reminderOffsets: data.reminderOffsets,
         });
 
         setTasks(prev => [...prev, newTask]);
@@ -86,10 +87,9 @@ export const useTaskBoard = ({
           description: data.description,
           status: data.status as TaskStatusType | undefined,
           dueDate: data.dueDate || undefined,
+          reminderOffsets: data.reminderOffsets,
           registrationId:
-            data.registrationId === undefined
-              ? undefined
-              : data.registrationId || undefined,
+            data.registrationId === undefined ? undefined : data.registrationId,
         });
 
         setTasks(prev =>

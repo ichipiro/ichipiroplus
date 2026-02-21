@@ -35,7 +35,7 @@ const notificationSchema = z.object({
     .min(1, "本文は必須です")
     .max(500, "本文は500文字以内で入力してください"),
   url: z.string().optional(),
-  notificationType: z.enum(["system", "task", "article"]),
+  notificationType: z.enum(["system", "task", "lecture"]),
   recipientType: z.enum(["all", "selected"]),
   userIds: z.string().optional(),
 });
@@ -70,7 +70,7 @@ export function NotificationSender() {
   const notificationTypeItems: SelectItem[] = [
     { label: "システム通知", value: "system" },
     { label: "タスク通知", value: "task" },
-    { label: "記事通知", value: "article" },
+    { label: "講義開始通知", value: "lecture" },
   ];
 
   const onSubmit: SubmitHandler<NotificationFormData> = data => {

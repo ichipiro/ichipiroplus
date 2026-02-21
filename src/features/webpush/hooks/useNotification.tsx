@@ -130,7 +130,7 @@ export function useNotification() {
           isSubscribed: true,
           settings: {
             taskReminders: matchingSubscription.task_reminders,
-            newArticles: matchingSubscription.new_articles,
+            lectureStarts: matchingSubscription.lecture_starts,
             systemNotices: matchingSubscription.system_notices,
           },
         },
@@ -225,7 +225,7 @@ export function useNotification() {
             isSubscribed: true,
             settings: {
               taskReminders: response.subscription.task_reminders,
-              newArticles: response.subscription.new_articles,
+              lectureStarts: response.subscription.lecture_starts,
               systemNotices: response.subscription.system_notices,
             },
           },
@@ -328,7 +328,7 @@ export function useNotification() {
         matchingSubscription.id,
         {
           task_reminders: newSettings.taskReminders,
-          new_articles: newSettings.newArticles,
+          lecture_starts: newSettings.lectureStarts,
           system_notices: newSettings.systemNotices,
           endpoint: "",
         },
@@ -344,9 +344,9 @@ export function useNotification() {
                 newSettings.taskReminders ??
                 state.subscriptionState.settings?.taskReminders ??
                 false,
-              newArticles:
-                newSettings.newArticles ??
-                state.subscriptionState.settings?.newArticles ??
+              lectureStarts:
+                newSettings.lectureStarts ??
+                state.subscriptionState.settings?.lectureStarts ??
                 false,
               systemNotices:
                 newSettings.systemNotices ??

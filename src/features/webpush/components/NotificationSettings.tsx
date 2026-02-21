@@ -4,6 +4,7 @@ import {
   Alert,
   AlertDescription,
   AlertIcon,
+  Badge,
   Box,
   Button,
   Card,
@@ -47,6 +48,27 @@ export default function NotificationSettings() {
   const [testTitle, setTestTitle] = useState("テスト通知");
   const [testBody, setTestBody] = useState("これはテスト通知です");
 
+  const notificationItems = [
+    {
+      id: "lecture-starts",
+      key: "lectureStarts" as const,
+      label: "講義開始通知",
+      helperMessage: "登録済み講義の開始時刻に通知を受け取ります",
+    },
+    {
+      id: "task-reminders",
+      key: "taskReminders" as const,
+      label: "タスク通知",
+      helperMessage: "タスクの期限に関する通知を受け取ります",
+    },
+    {
+      id: "system-notices",
+      key: "systemNotices" as const,
+      label: "システム通知",
+      helperMessage: "メンテナンス情報や重要なお知らせを受け取ります",
+    },
+  ];
+
   if (isLoading) {
     return (
       <Box textAlign="center" py={10}>
@@ -83,20 +105,43 @@ export default function NotificationSettings() {
           <TabPanels>
             <TabPanel>
               <VStack align="start" gap={6} w="full">
-                <FormControl
-                  label="プッシュ通知"
-                  helperMessage="タスクの期限や重要な更新についての通知を受け取ります"
-                >
-                  <HStack justifyContent="flex-end">
-                    <Switch
-                      id="push-notifications"
-                      checked={isSubscribed}
-                      onChange={() => toggleNotifications()}
-                      disabled={isProcessing}
-                      colorScheme="primary"
-                    />
-                  </HStack>
-                </FormControl>
+                <Card w="full">
+                  <CardHeader>
+                    <HStack justifyContent="space-between" w="full">
+                      <Heading size="sm">プッシュ通知</Heading>
+                      <Badge colorScheme={isSubscribed ? "green" : "gray"}>
+                        {isSubscribed ? "有効" : "無効"}
+                      </Badge>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    <VStack align="start" gap={4}>
+                      <FormControl
+                        label="通知配信"
+                        helperMessage="講義・タスク・システム通知をまとめて有効化します"
+                      >
+                        <HStack justifyContent="flex-end">
+                          <Switch
+                            id="push-notifications"
+                            checked={isSubscribed}
+                            onChange={() => toggleNotifications()}
+                            disabled={isProcessing}
+                            colorScheme="primary"
+                          />
+                        </HStack>
+                      </FormControl>
+
+                      {!isSubscribed && (
+                        <Alert status="info">
+                          <AlertIcon />
+                          <AlertDescription>
+                            先に通知配信をオンにすると、個別の通知種別を設定できます。
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </VStack>
+                  </CardBody>
+                </Card>
 
                 {permission === "default" && !isSubscribed && (
                   <Alert status="info">
@@ -107,49 +152,53 @@ export default function NotificationSettings() {
                   </Alert>
                 )}
 
-                {isSubscribed && settings && (
-                  <VStack mt={6} align="start" gap={4} w="full">
-                    <Card w="full">
-                      <CardHeader>
-                        <Heading size="sm">通知を受け取る項目</Heading>
-                      </CardHeader>
-                      <CardBody>
-                        <VStack align="start" gap={4}>
-                          <FormControl
-                            label="システム通知"
-                            helperMessage="メンテナンス情報や重要なお知らせを受け取ります"
-                          >
-                            <HStack justifyContent="flex-end">
-                              <Switch
-                                id="system-notices"
-                                checked={settings.systemNotices}
-                                onChange={() =>
-                                  updateSettings({
-                                    systemNotices: !settings.systemNotices,
-                                  })
-                                }
-                                disabled={!isSubscribed || isProcessing}
-                                colorScheme="primary"
-                              />
-                            </HStack>
-                          </FormControl>
-                        </VStack>
-                      </CardBody>
-                    </Card>
+                <Card w="full">
+                  <CardHeader>
+                    <Heading size="sm">通知を受け取る項目</Heading>
+                  </CardHeader>
+                  <CardBody>
+                    <VStack align="start" gap={4}>
+                      {notificationItems.map(item => (
+                        <FormControl
+                          key={item.id}
+                          label={item.label}
+                          helperMessage={item.helperMessage}
+                        >
+                          <HStack justifyContent="flex-end">
+                            <Switch
+                              id={item.id}
+                              checked={Boolean(settings?.[item.key])}
+                              onChange={() => {
+                                if (!settings) return;
+                                updateSettings({
+                                  [item.key]: !settings[item.key],
+                                });
+                              }}
+                              disabled={
+                                !isSubscribed || !settings || isProcessing
+                              }
+                              colorScheme="primary"
+                            />
+                          </HStack>
+                        </FormControl>
+                      ))}
+                    </VStack>
+                  </CardBody>
+                </Card>
 
-                    <Box alignSelf="flex-end">
-                      <Button
-                        variant="outline"
-                        colorScheme="danger"
-                        size="sm"
-                        onClick={() => toggleNotifications()}
-                        loading={isProcessing}
-                        loadingText="処理中..."
-                      >
-                        すべての通知をオフにする
-                      </Button>
-                    </Box>
-                  </VStack>
+                {isSubscribed && (
+                  <Box alignSelf="flex-end">
+                    <Button
+                      variant="outline"
+                      colorScheme="danger"
+                      size="sm"
+                      onClick={() => toggleNotifications()}
+                      loading={isProcessing}
+                      loadingText="処理中..."
+                    >
+                      すべての通知をオフにする
+                    </Button>
+                  </Box>
                 )}
               </VStack>
             </TabPanel>

@@ -3,6 +3,8 @@ import MobileNav from "@/components/MobileNav";
 import { HStack, VStack } from "@yamada-ui/react";
 import type { ReactNode } from "react";
 
+export const dynamic = "force-dynamic";
+
 type WebappLayoutProps = {
   children?: ReactNode;
   params?: Promise<Record<string, string | string[] | undefined>>;

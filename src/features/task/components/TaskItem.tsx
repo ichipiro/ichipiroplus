@@ -1,22 +1,13 @@
 "use client";
 
 import useActionFeedback from "@/hooks/useActionFeedback";
-import { format } from "@formkit/tempo";
 import type { Task } from "@prisma/client";
-import { DatePicker } from "@yamada-ui/calendar";
+import { CircleCheckBigIcon, CircleIcon, Trash2Icon } from "@yamada-ui/lucide";
 import {
-  CalendarIcon,
-  CircleCheckBigIcon,
-  CircleIcon,
-  Trash2Icon,
-} from "@yamada-ui/lucide";
-import {
-  Badge,
   Box,
   HStack,
   IconButton,
   Input,
-  Select,
   type SelectItem,
   Text,
   Textarea,
@@ -26,10 +17,12 @@ import {
   type MouseEvent,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
+import TaskMetaRow from "./task-item/TaskMetaRow";
+import TaskReminderSection from "./task-item/TaskReminderSection";
+import { useTaskItemDraft } from "./task-item/useTaskItemDraft";
 
 interface TaskItemProps {
   task: Task;
@@ -44,12 +37,23 @@ interface TaskItemProps {
       title?: string;
       description?: string;
       dueDate?: Date;
-      registrationId?: string;
+      reminderOffsets?: number[];
+      registrationId?: string | null;
     },
   ) => Promise<Task>;
   onToggleCompleted: (taskId: string) => Promise<Task | null>;
   onDelete: (taskId: string) => Promise<void>;
 }
+
+const CLICK_INSIDE_OVERLAY_SELECTOR = [
+  '[role="listbox"]',
+  '[role="option"]',
+  '[role="combobox"]',
+  ".ui-select",
+  ".ui-multi-select",
+  ".ui-datepicker",
+  ".ui-popover",
+].join(",");
 
 const TaskItem = ({
   task,
@@ -64,24 +68,26 @@ const TaskItem = ({
 }: TaskItemProps) => {
   const { withFeedback } = useActionFeedback();
   const rootRef = useRef<HTMLDivElement>(null);
-
   const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState(task.title);
-  const [description, setDescription] = useState(task.description ?? "");
-  const [registrationId, setRegistrationId] = useState<string | undefined>(
-    task.registrationId ?? undefined,
-  );
-  const [dueDate, setDueDate] = useState<Date | undefined>(
-    task.dueDate ? new Date(task.dueDate) : undefined,
-  );
 
-  useEffect(() => {
-    setTitle(task.title);
-    setDescription(task.description ?? "");
-    setRegistrationId(task.registrationId ?? undefined);
-    setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
-    setIsEditing(false);
-  }, [task]);
+  const {
+    title,
+    description,
+    registrationId,
+    dueDate,
+    dueTime,
+    reminderOffsets,
+    formattedDueDate,
+    hasChanges,
+    orderedReminderOffsets,
+    setTitle,
+    setDescription,
+    setRegistrationId,
+    setDueDateByPicker,
+    setDueHour,
+    setDueMinute,
+    toggleReminderOffset,
+  } = useTaskItemDraft(task);
 
   useEffect(() => {
     if (!autoEdit) return;
@@ -90,27 +96,6 @@ const TaskItem = ({
   }, [autoEdit, onAutoEditConsumed]);
 
   const isCompleted = task.status === 2;
-
-  const formattedDueDate = useMemo(
-    () => (dueDate ? format(dueDate, "short", "ja") : null),
-    [dueDate],
-  );
-
-  const hasChanges = useMemo(() => {
-    const normalizedTitle = title.trim();
-    const normalizedDescription = description;
-    const originalDueTime = task.dueDate
-      ? new Date(task.dueDate).getTime()
-      : null;
-    const currentDueTime = dueDate ? dueDate.getTime() : null;
-
-    return (
-      normalizedTitle !== task.title ||
-      normalizedDescription !== (task.description ?? "") ||
-      registrationId !== (task.registrationId ?? undefined) ||
-      originalDueTime !== currentDueTime
-    );
-  }, [description, dueDate, registrationId, task, title]);
 
   const handleToggleCompleted = async (event: MouseEvent) => {
     event.stopPropagation();
@@ -133,12 +118,20 @@ const TaskItem = ({
     }
 
     const result = await withFeedback(
-      onUpdate(task.id, {
-        title: normalizedTitle,
-        description,
-        dueDate,
-        registrationId,
-      }),
+      (() => {
+        const resolvedRegistrationId =
+          registrationId === undefined && task.registrationId
+            ? null
+            : registrationId;
+
+        return onUpdate(task.id, {
+          title: normalizedTitle,
+          description,
+          dueDate,
+          reminderOffsets,
+          registrationId: resolvedRegistrationId,
+        });
+      })(),
       {
         errorTitle: "タスク更新",
       },
@@ -155,7 +148,9 @@ const TaskItem = ({
     isPending,
     onUpdate,
     registrationId,
+    reminderOffsets,
     task.id,
+    task.registrationId,
     task.title,
     title,
     withFeedback,
@@ -181,13 +176,17 @@ const TaskItem = ({
     const handleDocumentClick = (event: MouseEvent | globalThis.MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
+
+      const element = target instanceof Element ? target : target.parentElement;
+      if (element?.closest(CLICK_INSIDE_OVERLAY_SELECTOR)) return;
+
       if (rootRef.current?.contains(target)) return;
       void saveIfChanged();
     };
 
-    document.addEventListener("click", handleDocumentClick, true);
+    document.addEventListener("click", handleDocumentClick);
     return () => {
-      document.removeEventListener("click", handleDocumentClick, true);
+      document.removeEventListener("click", handleDocumentClick);
     };
   }, [isEditing, saveIfChanged]);
 
@@ -277,69 +276,26 @@ const TaskItem = ({
             </Text>
           )}
 
-          <HStack gap={2} flexWrap={isEditing ? "wrap" : "nowrap"} minW={0}>
-            {isEditing ? (
-              <DatePicker
-                value={dueDate}
-                onChange={value => setDueDate(value || undefined)}
-                placeholder="期限を設定"
-                size="sm"
-                maxW={{ base: "full", sm: "xs" }}
-                onClick={event => event.stopPropagation()}
-              />
-            ) : (
-              <HStack
-                as="span"
-                borderWidth="1px"
-                borderRadius="full"
-                px={2}
-                py={1}
-                minW={0}
-                maxW="full"
-                color={["gray.700", "gray.100"]}
-                borderColor={["gray.300", "gray.500"]}
-                bg={["gray.100", "gray.700"]}
-                gap={1}
-              >
-                <CalendarIcon size="sm" />
-                <Text fontSize="xs" lineClamp={1}>
-                  {formattedDueDate ?? "未設定"}
-                </Text>
-              </HStack>
-            )}
+          <TaskMetaRow
+            isEditing={isEditing}
+            dueDate={dueDate}
+            dueTime={dueTime}
+            formattedDueDate={formattedDueDate}
+            lectureItems={lectureItems}
+            registrationId={registrationId}
+            registrationLabel={registrationLabel}
+            onDueDateChange={setDueDateByPicker}
+            onDueHourChange={setDueHour}
+            onDueMinuteChange={setDueMinute}
+            onRegistrationChange={setRegistrationId}
+          />
 
-            {isEditing && lectureItems ? (
-              <Select
-                items={lectureItems}
-                value={registrationId}
-                onChange={value => setRegistrationId(value || undefined)}
-                placeholder="講義を選択"
-                size="sm"
-                maxW={{ base: "full", sm: "xs" }}
-                onClick={event => event.stopPropagation()}
-              />
-            ) : (
-              <Badge
-                colorScheme="purple"
-                variant="subtle"
-                alignSelf="flex-start"
-                borderRadius="full"
-                px={2}
-                py={1}
-                minW={0}
-                maxW={isEditing ? "full" : "70%"}
-              >
-                <Text
-                  fontSize="xs"
-                  whiteSpace="nowrap"
-                  overflow="hidden"
-                  textOverflow="ellipsis"
-                >
-                  {registrationLabel ?? "講義未設定"}
-                </Text>
-              </Badge>
-            )}
-          </HStack>
+          <TaskReminderSection
+            isEditing={isEditing}
+            reminderOffsets={reminderOffsets}
+            orderedReminderOffsets={orderedReminderOffsets}
+            onToggleOffset={toggleReminderOffset}
+          />
 
           <HStack justify="flex-end" pt={1} />
         </VStack>

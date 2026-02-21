@@ -3,6 +3,8 @@ import CreateLectureForm from "@/features/timetable/components/CreateLectureForm
 import { Heading, Text, VStack } from "@yamada-ui/react";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "講義追加",
   description: "ユーザー独自の講義や予定を追加できます",

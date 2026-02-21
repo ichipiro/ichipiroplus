@@ -1,3 +1,6 @@
+import SettingsTabSwitcher, {
+  type SettingsTabItem,
+} from "@/app/(webapp)/settings/_components/SettingsTabSwitcher";
 import {
   getAllDepartments,
   getAllFaculties,
@@ -7,17 +10,17 @@ import AccountSettings from "@/features/user/components/AccountSettings";
 import DisplaySettings from "@/features/user/components/DisplaySettings";
 import MyProfileEditForm from "@/features/user/components/MyProfileEditForm";
 import NotificationSettings from "@/features/webpush/components/NotificationSettings";
-import { Box, Button, ButtonGroup, Heading, VStack } from "@yamada-ui/react";
+import { Box, Heading, VStack } from "@yamada-ui/react";
 import { redirect } from "next/navigation";
 
 interface SettingsPageProps {
   searchParams: Promise<{ tab?: string }>;
 }
 
-const settingsTabs = [
+const settingsTabs: SettingsTabItem[] = [
   { key: "general", label: "一般設定" },
   { key: "notification", label: "通知" },
-] as const;
+];
 
 type SettingsTab = (typeof settingsTabs)[number]["key"];
 
@@ -50,25 +53,7 @@ const SettingsPage = async ({ searchParams }: SettingsPageProps) => {
           overflowX="auto"
           css={{ WebkitOverflowScrolling: "touch" }}
         >
-          <ButtonGroup
-            attached
-            variant="outline"
-            w="max-content"
-            minW="full"
-            flexWrap="nowrap"
-          >
-            {settingsTabs.map(tabItem => (
-              <Button
-                key={tabItem.key}
-                as="a"
-                href={`/settings?tab=${tabItem.key}`}
-                colorScheme={tab === tabItem.key ? "blue" : "gray"}
-                whiteSpace="nowrap"
-              >
-                {tabItem.label}
-              </Button>
-            ))}
-          </ButtonGroup>
+          <SettingsTabSwitcher tabs={settingsTabs} activeTab={tab} />
         </Box>
       </Box>
 

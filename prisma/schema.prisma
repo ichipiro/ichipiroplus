@@ -59,6 +59,7 @@ model User {
   sessions             Session[]
   registrations        Registration[]
   tasks                Task[]
+  taskReminderDeliveries TaskReminderDelivery[]
   subscriptions        PushSubscription[]
   articles             Article[]
   ownedLectures        Lecture[]             @relation("LectureOwner")
@@ -201,14 +202,33 @@ model Task {
   title          String
   description    String?
   dueDate        DateTime?
+  reminderOffsets Int[]        @default([1440])
   status         Int           @default(1) // 1: Incomplete, 2: Done
   sortOrder      Int           @default(0)
 
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   registration   Registration? @relation(fields: [registrationId], references: [id])
+  reminderDeliveries TaskReminderDelivery[]
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+}
+
+model TaskReminderDelivery {
+  id            String   @id @default(cuid())
+  taskId         String
+  userId         String
+  offsetMinutes  Int
+  dueDate        DateTime
+  triggeredAt    DateTime
+  sentAt         DateTime @default(now())
+
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, offsetMinutes, dueDate])
+  @@index([userId, sentAt])
+  @@index([triggeredAt])
 }
 
 model PushSubscription {
@@ -218,7 +238,7 @@ model PushSubscription {
   p256dh        String   @db.Text
   auth          String   @db.Text
   taskReminders Boolean  @default(true)
-  newArticles   Boolean  @default(true)
+  lectureStarts Boolean  @default(true)
   systemNotices Boolean  @default(true)
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
