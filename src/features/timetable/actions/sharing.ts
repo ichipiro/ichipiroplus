@@ -38,6 +38,7 @@ export const getTimetableByUserId = async ({
   const items = await prisma.registration.findMany({
     where: {
       userId,
+      academicYear: term.academicYear,
       lecture: {
         lectureTerms: {
           some: { termNumber: term.number },
@@ -101,6 +102,7 @@ export const copyTimetableFromUser = async (
   const sourceRegistrations = await prisma.registration.findMany({
     where: {
       userId: sourceUser.id,
+      academicYear: term.academicYear,
       lecture: {
         lectureTerms: {
           some: { termNumber: term.number },
@@ -121,6 +123,7 @@ export const copyTimetableFromUser = async (
   const existing = await prisma.registration.findMany({
     where: {
       userId: targetUserId,
+      academicYear: term.academicYear,
       lectureId: { in: sourceRegistrations.map(r => r.lectureId) },
     },
     select: { lectureId: true },
@@ -136,14 +139,16 @@ export const copyTimetableFromUser = async (
 
       await tx.registration.upsert({
         where: {
-          userId_lectureId: {
+          userId_lectureId_academicYear: {
             userId: targetUserId,
             lectureId: source.lectureId,
+            academicYear: term.academicYear,
           },
         },
         create: {
           userId: targetUserId,
           lectureId: source.lectureId,
+          academicYear: term.academicYear,
           attendanceCount: source.attendanceCount,
         },
         update: {

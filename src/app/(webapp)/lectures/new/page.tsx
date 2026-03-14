@@ -1,4 +1,4 @@
-import { getCurrentTerm, getTerms } from "@/features/timetable/actions";
+import { getCurrentTerm } from "@/features/timetable/actions";
 import CreateLectureForm from "@/features/timetable/components/CreateLectureForm";
 import { Heading, Text, VStack } from "@yamada-ui/react";
 import type { Metadata } from "next";
@@ -11,10 +11,14 @@ export const metadata: Metadata = {
 };
 
 const LectureCreatePage = async () => {
-  const [terms, currentTerm] = await Promise.all([
-    getTerms(),
-    getCurrentTerm(),
-  ]);
+  const currentTerm = await getCurrentTerm();
+
+  const termOptions = [
+    { number: 1, name: "第1ターム" },
+    { number: 2, name: "第2ターム" },
+    { number: 3, name: "第3ターム" },
+    { number: 4, name: "第4ターム" },
+  ];
 
   return (
     <VStack align="stretch" gap={4} w="full">
@@ -26,10 +30,7 @@ const LectureCreatePage = async () => {
       </Text>
 
       <CreateLectureForm
-        termOptions={terms.map(term => ({
-          number: term.number,
-          name: term.name,
-        }))}
+        termOptions={termOptions}
         defaultTermNumber={currentTerm.number}
       />
     </VStack>

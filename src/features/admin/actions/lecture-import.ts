@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseJson } from "@/lib/read-json";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import {
@@ -21,7 +22,7 @@ export const validateLectureData = async (
   errors?: string[];
 }> => {
   try {
-    const jsonData = JSON.parse(jsonString);
+    const jsonData = parseJson<unknown>(jsonString);
 
     if (!Array.isArray(jsonData)) {
       return { valid: false, errors: ["データは配列形式である必要があります"] };
@@ -63,6 +64,7 @@ export const validateLectureData = async (
  */
 export const importLectureData = async (
   jsonString: string,
+  academicYear: number,
 ): Promise<ImportResult> => {
   try {
     // セッション情報を事前に取得
@@ -134,13 +136,19 @@ export const importLectureData = async (
 
         const lectureBaseData = buildLectureBaseData(
           item,
+          academicYear,
           ownerId,
           scheduleIds,
           departmentIds,
         );
 
         const upserted = await prisma.lecture.upsert({
-          where: { syllabusCode: item.syllabusCode },
+          where: {
+            syllabusCode_academicYear: {
+              syllabusCode: item.syllabusCode,
+              academicYear,
+            },
+          },
           create: lectureBaseData,
           update: lectureBaseData,
           select: { id: true },
@@ -204,11 +212,13 @@ const connectById = <T extends string | number>(ids: T[]) =>
 
 const buildLectureBaseData = (
   item: LectureImportData,
+  academicYear: number,
   ownerId: string,
   scheduleIds: number[],
   departmentIds: string[],
 ) => ({
   syllabusCode: item.syllabusCode,
+  academicYear,
   name: item.name,
   instructor: item.instructor ?? "未定",
   room: item.room ?? null,

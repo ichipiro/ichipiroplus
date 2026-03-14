@@ -16,7 +16,11 @@ const NavItem = ({ label, icon, href, isHighlight, onClick }: NavItemProps) => {
     <Link
       href={href}
       passHref
-      style={{ textDecoration: "none", width: "100%" }}
+      style={{
+        display: "flex",
+        width: "100%",
+        textDecoration: "none",
+      }}
       onClick={onClick}
     >
       <HStack w="full">

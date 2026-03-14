@@ -16,7 +16,7 @@ const TimetablePicker = async ({ nowTerm }: TimetablePickerProps) => {
           return (
             <Option value={term.id} key={term.id}>
               <Link href={`/timetable/${term.id}`} key={term.id}>
-                {term.name}
+                {term.academicYear}年度 第{term.number}ターム
               </Link>
             </Option>
           );

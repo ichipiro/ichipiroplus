@@ -422,6 +422,7 @@ export const triggerLectureStartNotifications = async ({
     select: {
       id: true,
       number: true,
+      academicYear: true,
       name: true,
     },
   });
@@ -438,6 +439,7 @@ export const triggerLectureStartNotifications = async ({
 
   const registrations = await prisma.registration.findMany({
     where: {
+      academicYear: activeTerm.academicYear,
       lecture: {
         isPublic: true,
         schedules: { some: { day: slot.day, time: slot.time } },

@@ -40,3 +40,9 @@ export type ImportResult = {
     teachers?: number;
   };
 };
+
+export type LectureImportValidationResult = {
+  valid: boolean;
+  dataCount?: number;
+  errors?: string[];
+};

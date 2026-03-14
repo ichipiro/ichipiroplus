@@ -1,4 +1,5 @@
 import { LectureImporter } from "@/features/admin/components/LectureImporter";
+import { getCurrentTerm } from "@/features/timetable/actions/terms";
 import { checkAdminAccess } from "@/lib/admin";
 import { Heading, Text, VStack } from "@yamada-ui/react";
 import type { Metadata } from "next";
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default async function SyllabusImportPage() {
   // 管理者権限チェック
   await checkAdminAccess();
+  const currentTerm = await getCurrentTerm();
 
   return (
     <VStack gap={6} align="stretch">
@@ -24,7 +26,7 @@ export default async function SyllabusImportPage() {
         </Text>
       </div>
 
-      <LectureImporter />
+      <LectureImporter defaultAcademicYear={currentTerm.academicYear} />
 
       <Text fontSize="sm" color="gray.500">
         注意:

@@ -11,6 +11,7 @@ import {
   Button,
   FormControl,
   HStack,
+  Input,
   Select,
   type SelectItem,
   Tag,
@@ -25,6 +26,9 @@ export default function TermForm() {
   }>({ success: false, error: null });
   const [isPending, setIsPending] = useState(false);
   const [selectedTerm, setSelectedTerm] = useState("1");
+  const [academicYear, setAcademicYear] = useState(
+    String(new Date().getFullYear()),
+  );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,6 +46,7 @@ export default function TermForm() {
     });
 
     const number = Number(selectedTerm);
+    const parsedAcademicYear = Number(academicYear);
     const startDate = new Date(startDateValue as string);
     const endDate = new Date(endDateValue as string);
 
@@ -52,10 +57,11 @@ export default function TermForm() {
       4: "第4ターム（冬）",
     };
 
-    const name = `${termNames[number as keyof typeof termNames]}`;
+    const name = `${parsedAcademicYear}年度 ${termNames[number as keyof typeof termNames]}`;
 
     try {
       await upsertTerm({
+        academicYear: parsedAcademicYear,
         number,
         name,
         startDate,
@@ -66,6 +72,7 @@ export default function TermForm() {
       // フォームをリセット
       event.currentTarget.reset();
       setSelectedTerm("1");
+      setAcademicYear(String(new Date().getFullYear()));
     } catch (error) {
       setState({
         success: false,
@@ -117,6 +124,26 @@ export default function TermForm() {
         </Box>
 
         <HStack>
+          <FormControl
+            label="年度"
+            required
+            requiredIndicator={
+              <Tag size="sm" colorScheme="danger" ms={2}>
+                必須
+              </Tag>
+            }
+          >
+            <Input
+              name="academicYear"
+              type="number"
+              value={academicYear}
+              onChange={event => setAcademicYear(event.target.value)}
+              min={2000}
+              max={2100}
+              required
+            />
+          </FormControl>
+
           {/* ターム */}
           <FormControl
             label="ターム"

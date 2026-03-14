@@ -53,8 +53,6 @@ type FormAction =
       field: "name" | "instructor" | "room" | "biko";
       value: string;
     }
-  | { type: "toggleTermNumber"; termNumber: number }
-  | { type: "toggleScheduleId"; scheduleId: number }
   | { type: "toggleIsPublic" }
   | { type: "toggleIsPublicEditable" };
 
@@ -75,28 +73,6 @@ const formReducer = (state: FormState, action: FormAction): FormState => {
   switch (action.type) {
     case "setField":
       return { ...state, [action.field]: action.value };
-    case "toggleTermNumber":
-      return {
-        ...state,
-        selectedTermNumbers: state.selectedTermNumbers.includes(
-          action.termNumber,
-        )
-          ? state.selectedTermNumbers.filter(
-              value => value !== action.termNumber,
-            )
-          : [...state.selectedTermNumbers, action.termNumber],
-      };
-    case "toggleScheduleId":
-      return {
-        ...state,
-        selectedScheduleIds: state.selectedScheduleIds.includes(
-          action.scheduleId,
-        )
-          ? state.selectedScheduleIds.filter(
-              value => value !== action.scheduleId,
-            )
-          : [...state.selectedScheduleIds, action.scheduleId],
-      };
     case "toggleIsPublic":
       return { ...state, isPublic: !state.isPublic };
     case "toggleIsPublicEditable":
@@ -124,12 +100,7 @@ const EditLectureForm = ({
   );
 
   const handleSubmit = () => {
-    if (
-      !canEdit ||
-      !state.name.trim() ||
-      state.selectedTermNumbers.length === 0 ||
-      state.selectedScheduleIds.length === 0
-    ) {
+    if (!canEdit || !state.name.trim()) {
       return;
     }
 
@@ -214,22 +185,15 @@ const EditLectureForm = ({
             {termOptions.map(term => {
               const checked = state.selectedTermNumbers.includes(term.number);
               return (
-                <Checkbox
-                  key={term.number}
-                  checked={checked}
-                  disabled={!canEdit}
-                  onChange={() =>
-                    dispatch({
-                      type: "toggleTermNumber",
-                      termNumber: term.number,
-                    })
-                  }
-                >
+                <Checkbox key={term.number} checked={checked} disabled readOnly>
                   {term.name}
                 </Checkbox>
               );
             })}
           </Wrap>
+          <Text mt={2} fontSize="sm" color="gray.600">
+            タームは編集できません。
+          </Text>
         </FormControl>
 
         <FormControl label="開講時期（曜日・時限）" required>
@@ -237,22 +201,15 @@ const EditLectureForm = ({
             {SCHEDULE_OPTIONS.map(schedule => {
               const checked = state.selectedScheduleIds.includes(schedule.id);
               return (
-                <Checkbox
-                  key={schedule.id}
-                  checked={checked}
-                  disabled={!canEdit}
-                  onChange={() =>
-                    dispatch({
-                      type: "toggleScheduleId",
-                      scheduleId: schedule.id,
-                    })
-                  }
-                >
+                <Checkbox key={schedule.id} checked={checked} disabled readOnly>
                   {schedule.label}
                 </Checkbox>
               );
             })}
           </Wrap>
+          <Text mt={2} fontSize="sm" color="gray.600">
+            曜日時限は編集できません。
+          </Text>
         </FormControl>
 
         <FormControl label="備考">

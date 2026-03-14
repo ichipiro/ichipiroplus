@@ -42,15 +42,16 @@ const LectureCatalogHeader = ({
         justify={{ base: "flex-end", md: "stretch" }}
         flexDirection={{ base: "row", md: "column" }}
       >
-        <Button
-          as="a"
-          href={`/lectures/${lecture.id}/edit`}
-          colorScheme="blue"
-          disabled={!canEdit}
-          w={{ base: "auto", md: "full" }}
-        >
-          編集
-        </Button>
+        {canEdit && (
+          <Button
+            as="a"
+            href={`/lectures/${lecture.id}/edit`}
+            colorScheme="blue"
+            w={{ base: "auto", md: "full" }}
+          >
+            編集
+          </Button>
+        )}
         <Button
           as="a"
           href="/lectures"

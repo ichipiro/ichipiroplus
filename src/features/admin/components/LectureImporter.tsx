@@ -15,6 +15,7 @@ import {
   Divider,
   HStack,
   Heading,
+  Input,
   List,
   ListItem,
   Text,
@@ -25,17 +26,19 @@ import {
   importLectureData,
   validateLectureData,
 } from "../actions/lecture-import";
-import type { ImportResult } from "../types";
+import type { ImportResult, LectureImportValidationResult } from "../types";
 
-export function LectureImporter() {
+interface LectureImporterProps {
+  defaultAcademicYear: number;
+}
+
+export function LectureImporter({ defaultAcademicYear }: LectureImporterProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [validationResult, setValidationResult] = useState<{
-    valid: boolean;
-    dataCount?: number;
-    errors?: string[];
-  } | null>(null);
+  const [validationResult, setValidationResult] =
+    useState<LectureImportValidationResult | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [academicYear, setAcademicYear] = useState(String(defaultAcademicYear));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { withFeedback, showError } = useActionFeedback();
 
@@ -74,10 +77,13 @@ export function LectureImporter() {
     startTransition(async () => {
       try {
         const text = await file.text();
-        const result = await withFeedback(importLectureData(text), {
-          successMessage: "講義データのインポートが完了しました",
-          errorTitle: "インポートに失敗しました",
-        });
+        const result = await withFeedback(
+          importLectureData(text, Number(academicYear)),
+          {
+            successMessage: "講義データのインポートが完了しました",
+            errorTitle: "インポートに失敗しました",
+          },
+        );
         setImportResult(result || null);
       } catch (error) {
         showError(error as Error);
@@ -104,6 +110,20 @@ export function LectureImporter() {
       </CardHeader>
       <CardBody>
         <VStack gap={4} align="stretch">
+          <Box>
+            <Text fontSize="sm" fontWeight="medium" mb={2}>
+              対象年度
+            </Text>
+            <Input
+              type="number"
+              value={academicYear}
+              onChange={event => setAcademicYear(event.target.value)}
+              min={2000}
+              max={2100}
+              w={{ base: "full", md: "12rem" }}
+            />
+          </Box>
+
           {/* File input */}
           <Box>
             <input
@@ -185,6 +205,7 @@ export function LectureImporter() {
                 onClick={handleImport}
                 loading={isImporting}
                 loadingText="インポート中..."
+                disabled={!academicYear.trim()}
               >
                 インポート実行
               </Button>

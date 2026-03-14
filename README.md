@@ -19,7 +19,7 @@
 ```bash
 
 # リポジトリのクローン
-git clone git@github.com:53-gm/ichipiroplus.git
+git clone git@github.com:ichipiro/ichipiroplus.git
 cd ichipiroplus
 
 # パッケージのインストール
@@ -43,7 +43,7 @@ docker-compose up -d
 npm run db:migrate
 
 # 初期値の挿入
-npm run db:seed
+npm run db:seed -- --academic-year=2026
 
 # 開発サーバーを起動
 npm run dev
@@ -129,7 +129,8 @@ npm run start
 - npm run db:migrate - マイグレーションを実行
 - npm run db:generate - Prisma Client を生成
 - npm run db:studio - Prisma Studio を起動（DB を GUI で確認）
-- npm run db:seed - シードデータを投入
+- npm run db:seed -- --academic-year=年度 - シードデータを投入(年度には数値を入れてください。)
+- npm run db:seed - (今年度設定)
 
 開発
 

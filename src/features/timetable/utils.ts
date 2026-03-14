@@ -1,4 +1,4 @@
-import { DAYS, MAX_TIME, TIMES } from "./constant";
+import { DAY_LABELS, DAYS, MAX_TIME, TIMES } from "./constant";
 
 /**
  * 年度とタームを検証する
@@ -33,17 +33,10 @@ export const getScheduleKey = (day: number, time: number) => {
  * @returns day:日付の数値(月=1, 火=2, ...), time:時限の数値(1限=1, 2限=2, ...)
  */
 export const getDayTimeByScheduleKey = (scheduleKey: number) => {
-  const day = Math.floor(scheduleKey / MAX_TIME) + 1;
-  const time = scheduleKey % MAX_TIME;
+  const normalizedKey = scheduleKey - 1;
+  const day = Math.floor(normalizedKey / MAX_TIME) + 1;
+  const time = (normalizedKey % MAX_TIME) + 1;
   return { day, time };
-};
-
-export const DAY_LABELS: Record<number, string> = {
-  1: "月",
-  2: "火",
-  3: "水",
-  4: "木",
-  5: "金",
 };
 
 export const formatDayTimeLabel = (day: number, time: number) => {

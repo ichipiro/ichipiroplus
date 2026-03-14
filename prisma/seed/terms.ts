@@ -1,41 +1,50 @@
+import { getAcademicYear } from "@/lib/academic-year";
 import type { PrismaClient } from "@prisma/client";
 
-export const seedTerms = async (prisma: PrismaClient) => {
+export const seedTerms = async (
+  prisma: PrismaClient,
+  academicYear = getAcademicYear(),
+) => {
   console.log("学期データを作成...");
-
-  const currentYear = new Date().getFullYear();
 
   const terms = [
     {
-      name: "第1ターム",
+      academicYear,
+      name: `${academicYear}年度 第1ターム`,
       number: 1,
-      startDate: new Date(currentYear, 4, 8), // 4月8日
-      endDate: new Date(currentYear, 6, 6),
+      startDate: new Date(academicYear, 3, 8), // 4月8日
+      endDate: new Date(academicYear, 5, 30), // 6月30日
     },
     {
-      name: "第2ターム",
+      academicYear,
+      name: `${academicYear}年度 第2ターム`,
       number: 2,
-      startDate: new Date(currentYear, 6, 7), // 6月7日
-      endDate: new Date(currentYear, 8, 8), // 8月8日
+      startDate: new Date(academicYear, 6, 7), // 7月7日
+      endDate: new Date(academicYear, 8, 8), // 9月8日
     },
     {
-      name: "第3ターム",
+      academicYear,
+      name: `${academicYear}年度 第3ターム`,
       number: 3,
-      startDate: new Date(currentYear, 10, 1), // 10月1日
-      endDate: new Date(currentYear, 11, 27), // 11月27日
+      startDate: new Date(academicYear, 9, 1), // 10月1日
+      endDate: new Date(academicYear, 10, 27), // 11月27日
     },
     {
-      name: "第4ターム",
+      academicYear,
+      name: `${academicYear}年度 第4ターム`,
       number: 4,
-      startDate: new Date(currentYear, 11, 28), // 11月28日
-      endDate: new Date(currentYear + 1, 2, 5), // 2月5日
+      startDate: new Date(academicYear, 11, 1), // 12月1日
+      endDate: new Date(academicYear + 1, 1, 5), // 2月5日
     },
   ];
 
   for (const termData of terms) {
     const term = await prisma.term.upsert({
       where: {
-        number: termData.number,
+        academicYear_number: {
+          academicYear: termData.academicYear,
+          number: termData.number,
+        },
       },
       update: {},
       create: termData,
