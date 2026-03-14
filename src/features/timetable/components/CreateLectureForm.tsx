@@ -145,7 +145,7 @@ const CreateLectureForm = ({
   };
 
   return (
-    <VStack align="stretch" gap={4} w="full" maxW="3xl">
+    <VStack align="stretch" gap={4} w="full">
       <Alert status="info">
         <AlertIcon />
         <Box>

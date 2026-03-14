@@ -103,13 +103,17 @@ model Department {
 
 model Term {
   id        String   @id @default(cuid())
-  number    Int      @unique // ターム番号 (1-4)
+  academicYear Int   // 年度 (2025 など)
+  number    Int      // ターム番号 (1-4)
   name      String   // 表示名 ("第1ターム（春）")
   startDate DateTime
   endDate   DateTime
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([academicYear, number])
+  @@index([academicYear, startDate, endDate])
 }
 
 model Schedule {
@@ -125,7 +129,8 @@ model Lecture {
   id               String         @id @default(cuid())
 
   // 識別情報
-  syllabusCode     String?        @unique // 公式シラバスコード（スクレイピング元のID）
+  syllabusCode     String?        // 公式シラバスコード（スクレイピング元のID）
+  academicYear     Int
 
   // 基本情報
   name             String
@@ -163,8 +168,9 @@ model Lecture {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  @@index([syllabusCode])
-  @@index([name])
+  @@unique([syllabusCode, academicYear])
+  @@index([academicYear, syllabusCode])
+  @@index([academicYear, name])
   @@index([ownerId])
 }
 
@@ -183,6 +189,7 @@ model Registration {
   id              String   @id @default(cuid())
   userId          String
   lectureId       String
+  academicYear    Int
   attendanceCount Int      @default(0)
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -192,7 +199,8 @@ model Registration {
   registeredAt    DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([userId, lectureId])
+  @@unique([userId, lectureId, academicYear])
+  @@index([userId, academicYear])
 }
 
 model Task {

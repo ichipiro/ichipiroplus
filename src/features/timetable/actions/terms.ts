@@ -9,7 +9,7 @@ import type { Term } from "@prisma/client";
  */
 export const getTerms = async (): Promise<Term[]> => {
   return await prisma.term.findMany({
-    orderBy: { number: "asc" },
+    orderBy: [{ academicYear: "desc" }, { number: "asc" }],
   });
 };
 
@@ -24,7 +24,7 @@ export const getCurrentTerm = async (): Promise<Term> => {
       startDate: { lte: now },
       endDate: { gte: now },
     },
-    orderBy: { number: "asc" },
+    orderBy: [{ academicYear: "desc" }, { number: "asc" }],
   });
 
   if (currentTerm) {

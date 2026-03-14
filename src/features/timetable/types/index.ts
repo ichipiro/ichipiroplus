@@ -32,6 +32,7 @@ export interface RegistrationFormData {
 
 // Term creation data for admin
 export interface TermFormData {
+  academicYear: number;
   number: number;
   name: string;
   startDate: Date;
@@ -63,6 +64,7 @@ export const lectureFormSchema = z.object({
 // Term form validation schema for admin
 export const termFormSchema = z
   .object({
+    academicYear: z.number().int().min(2000).max(2100),
     number: z.number().min(1).max(4),
     name: z.string().min(1, "ターム名は必須です"),
     startDate: z.date(),

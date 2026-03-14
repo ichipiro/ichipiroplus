@@ -34,7 +34,6 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "src/features/user/components/NotificationSettings.jsx",
-    "src/worker/index.js",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

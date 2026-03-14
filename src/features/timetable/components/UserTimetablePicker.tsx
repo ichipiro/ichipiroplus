@@ -4,7 +4,7 @@ import { HStack, Option, Select, Text } from "@yamada-ui/react";
 import { usePathname, useRouter } from "next/navigation";
 
 type UserTimetablePickerProps = {
-  terms: { id: string; name: string }[];
+  terms: { id: string; name: string; number: number; academicYear: number }[];
   selectedTermId: string;
 };
 
@@ -30,7 +30,7 @@ const UserTimetablePicker = ({
       <Select value={selectedTermId} onChange={value => handleChange(value)}>
         {terms.map(term => (
           <Option key={term.id} value={term.id}>
-            {term.name}
+            {term.academicYear}年度 第{term.number}ターム
           </Option>
         ))}
       </Select>

@@ -1,7 +1,7 @@
 import { Grid, GridItem, Text, VStack } from "@yamada-ui/react";
 import Link from "next/link";
 import React from "react";
-import { DAYS, TIMES, TIMES_VALUE } from "../constant";
+import { DAYS, TIMES, TIMES_VALUE, WEEKDAY_LABELS } from "../constant";
 import { getScheduleKey } from "../utils";
 import TimetableCell from "./TimetableCell";
 
@@ -31,7 +31,7 @@ const TimeTableGrid = ({
       {/* 曜日ヘッダー */}
       {DAYS.map(day => (
         <GridItem key={day} textAlign={"center"} alignContent={"center"}>
-          <Text>{["月", "火", "水", "木", "金", "土", "日"][day - 1]}曜日</Text>
+          <Text>{WEEKDAY_LABELS[day - 1]}曜日</Text>
         </GridItem>
       ))}
       <GridItem display={{ base: "block", md: "none" }} />

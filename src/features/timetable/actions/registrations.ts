@@ -16,7 +16,7 @@ export const getMyRegistrations = async (
 
   const term = await prisma.term.findUnique({
     where: { id: termId },
-    select: { number: true },
+    select: { number: true, academicYear: true },
   });
 
   if (!term) {
@@ -26,6 +26,7 @@ export const getMyRegistrations = async (
   return await prisma.registration.findMany({
     where: {
       userId,
+      academicYear: term.academicYear,
       lecture: {
         lectureTerms: {
           some: { termNumber: term.number },
@@ -46,7 +47,7 @@ export const getRegistrationsBySchedule = async (
   const userId = await getMe();
   const term = await prisma.term.findUnique({
     where: { id: termId },
-    select: { number: true },
+    select: { number: true, academicYear: true },
   });
 
   if (!term) {
@@ -56,6 +57,7 @@ export const getRegistrationsBySchedule = async (
   return await prisma.registration.findFirst({
     where: {
       userId,
+      academicYear: term.academicYear,
       lecture: {
         lectureTerms: {
           some: { termNumber: term.number },
@@ -84,7 +86,7 @@ export const getRegistrationByScheduleForUser = async (
     }),
     prisma.term.findUnique({
       where: { id: termId },
-      select: { number: true },
+      select: { number: true, academicYear: true },
     }),
   ]);
 
@@ -100,6 +102,7 @@ export const getRegistrationByScheduleForUser = async (
   return await prisma.registration.findFirst({
     where: {
       userId,
+      academicYear: term.academicYear,
       lecture: {
         lectureTerms: {
           some: { termNumber: term.number },
@@ -143,7 +146,7 @@ export const registerForLecture = async (
   const userId = await getMe();
   const term = await prisma.term.findUnique({
     where: { id: termId },
-    select: { number: true },
+    select: { number: true, academicYear: true },
   });
 
   if (!term) {
@@ -161,6 +164,9 @@ export const registerForLecture = async (
   if (!lecture) {
     throw new NotFoundError("講義");
   }
+  if (lecture.academicYear !== term.academicYear) {
+    throw new BadRequestError("この年度では登録できない講義です");
+  }
   if (!lecture.lectureTerms.some(lt => lt.termNumber === term.number)) {
     throw new BadRequestError("この学期では登録できない講義です");
   }
@@ -168,9 +174,10 @@ export const registerForLecture = async (
   // 既に登録済みかチェック
   const existing = await prisma.registration.findUnique({
     where: {
-      userId_lectureId: {
+      userId_lectureId_academicYear: {
         userId: userId,
         lectureId: lectureId,
+        academicYear: term.academicYear,
       },
     },
   });
@@ -183,6 +190,7 @@ export const registerForLecture = async (
     data: {
       userId: userId,
       lectureId: lectureId,
+      academicYear: term.academicYear,
       attendanceCount: 0,
     },
   });

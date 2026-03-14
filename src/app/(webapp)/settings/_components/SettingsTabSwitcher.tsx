@@ -11,9 +11,14 @@ export interface SettingsTabItem {
 interface SettingsTabSwitcherProps {
   tabs: SettingsTabItem[];
   activeTab: string;
+  extraParamsByTab?: Record<string, Record<string, string | undefined>>;
 }
 
-const SettingsTabSwitcher = ({ tabs, activeTab }: SettingsTabSwitcherProps) => {
+const SettingsTabSwitcher = ({
+  tabs,
+  activeTab,
+  extraParamsByTab,
+}: SettingsTabSwitcherProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -21,6 +26,18 @@ const SettingsTabSwitcher = ({ tabs, activeTab }: SettingsTabSwitcherProps) => {
   const handleMoveTab = (tabKey: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tabKey);
+
+    const extraParams = extraParamsByTab?.[tabKey];
+    if (extraParams) {
+      for (const [key, value] of Object.entries(extraParams)) {
+        if (value) {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      }
+    }
+
     router.push(`${pathname}?${params.toString()}`);
   };
 

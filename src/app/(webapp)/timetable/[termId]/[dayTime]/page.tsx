@@ -34,9 +34,17 @@ const TimeSlotPage = async ({ params, searchParams }: TimeSlotPageProps) => {
     day,
     time,
     termNumber: term.number,
+    academicYear: term.academicYear,
   });
 
-  return <LectureList lectures={lectures} termId={term.id} />;
+  return (
+    <LectureList
+      lectures={lectures}
+      termId={term.id}
+      currentTermNumber={term.number}
+      emptyMessage="この時間帯に登録できる講義はありません。"
+    />
+  );
 };
 
 export default TimeSlotPage;

@@ -20,13 +20,17 @@ export async function upsertTerm(data: TermFormData) {
   // 同じターム番号の既存データを確認
   const existing = await prisma.term.findUnique({
     where: {
-      number: data.number,
+      academicYear_number: {
+        academicYear: data.academicYear,
+        number: data.number,
+      },
     },
   });
 
   // 期間重複チェック
   const overlapping = await prisma.term.findMany({
     where: {
+      academicYear: data.academicYear,
       ...(existing && { id: { not: existing.id } }),
       OR: [
         // 新しい開始日が既存期間内にある
@@ -68,6 +72,7 @@ export async function upsertTerm(data: TermFormData) {
   if (wouldBeActive) {
     const currentlyActive = await prisma.term.findMany({
       where: {
+        academicYear: data.academicYear,
         ...(existing && { id: { not: existing.id } }),
         startDate: { lte: now },
         endDate: { gte: now },
@@ -100,6 +105,7 @@ export async function upsertTerm(data: TermFormData) {
   const created = await prisma.term.create({
     data: {
       number: data.number,
+      academicYear: data.academicYear,
       name: data.name,
       startDate: data.startDate,
       endDate: data.endDate,
@@ -127,6 +133,7 @@ export async function deleteTerm(termId: string) {
  * 学期期間の重複チェック
  */
 export async function validateTermDates(
+  academicYear: number,
   number: number,
   startDate: Date,
   endDate: Date,
@@ -137,6 +144,7 @@ export async function validateTermDates(
   // 同じ年度内で期間が重複する学期をチェック
   const overlapping = await prisma.term.findMany({
     where: {
+      academicYear,
       number,
       ...(excludeId && { id: { not: excludeId } }),
       OR: [

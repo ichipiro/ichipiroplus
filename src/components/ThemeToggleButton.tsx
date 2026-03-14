@@ -8,13 +8,13 @@ export const ThemeToggleButton = () => {
 
   return (
     <HStack gap={2}>
-      <SunIcon size="1.25em" />
+      <SunIcon fontSize="1.25em" />
       <Switch
         checked={colorMode === "dark"}
         onChange={toggleColorMode}
         colorScheme="primary"
       />
-      <MoonIcon size="1.25em" />
+      <MoonIcon fontSize="1.25em" />
     </HStack>
   );
 };

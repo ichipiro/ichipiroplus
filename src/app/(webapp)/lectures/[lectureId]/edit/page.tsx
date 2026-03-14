@@ -2,10 +2,10 @@ import {
   canEditLecture,
   getLectureCatalogDetail,
 } from "@/features/timetable/actions/lectures";
-import { getTerms } from "@/features/timetable/actions/terms";
 import EditLectureForm from "@/features/timetable/components/EditLectureForm";
 import { getScheduleKey } from "@/features/timetable/utils";
 import { getMe } from "@/features/user/actions";
+import { ForbiddenError } from "@/lib/errors";
 import { Button, Heading, Text, VStack } from "@yamada-ui/react";
 import type { Metadata } from "next";
 
@@ -22,13 +22,22 @@ type LectureEditPageProps = {
 
 const LectureEditPage = async ({ params }: LectureEditPageProps) => {
   const { lectureId } = await params;
-  const [lecture, terms, canEdit, me] = await Promise.all([
+  const [lecture, canEdit, me] = await Promise.all([
     getLectureCatalogDetail(lectureId),
-    getTerms(),
     canEditLecture(lectureId),
     getMe(),
   ]);
+  const termOptions = [
+    { number: 1, name: "第1ターム（春）" },
+    { number: 2, name: "第2ターム（夏）" },
+    { number: 3, name: "第3ターム（秋）" },
+    { number: 4, name: "第4ターム（冬）" },
+  ];
   const isOwner = lecture.owner.id === me;
+
+  if (!canEdit) {
+    throw new ForbiddenError("この講義を編集する権限がありません");
+  }
 
   return (
     <VStack align="stretch" gap={4} w="full">
@@ -51,10 +60,7 @@ const LectureEditPage = async ({ params }: LectureEditPageProps) => {
           isPublic: lecture.isPublic,
           isPublicEditable: lecture.isPublicEditable,
         }}
-        termOptions={terms.map(term => ({
-          number: term.number,
-          name: term.name,
-        }))}
+        termOptions={termOptions}
         canEdit={canEdit}
         canChangeVisibility={isOwner}
       />

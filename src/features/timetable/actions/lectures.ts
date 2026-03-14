@@ -4,10 +4,12 @@ import { ForbiddenError, NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 
 import { getMe } from "@/features/user/actions";
+import { getCurrentTerm } from "./terms";
 import type { Lecture, LectureFormData } from "../types";
 
-type LectureCatalogItem = {
+export type LectureCatalogItem = {
   id: string;
+  academicYear: number;
   syllabusCode: string | null;
   name: string;
   instructor: string;
@@ -20,6 +22,7 @@ type LectureCatalogItem = {
 
 type LectureCatalogDetail = {
   id: string;
+  academicYear: number;
   syllabusCode: string | null;
   name: string;
   instructor: string;
@@ -52,9 +55,11 @@ export const getLectures = async (params?: {
   day?: number;
   time?: number;
   termNumber?: number; // 概念的ターム番号 (1-4)
-}): Promise<Lecture[]> => {
+  academicYear?: number;
+}): Promise<LectureCatalogItem[]> => {
   const lectures = await prisma.lecture.findMany({
     where: {
+      ...(params?.academicYear && { academicYear: params.academicYear }),
       ...(params?.termNumber && {
         lectureTerms: {
           some: {
@@ -72,10 +77,34 @@ export const getLectures = async (params?: {
           },
         }),
       isPublic: true,
-      isPublicEditable: true,
     },
     orderBy: {
       name: "asc",
+    },
+    select: {
+      id: true,
+      academicYear: true,
+      syllabusCode: true,
+      name: true,
+      instructor: true,
+      room: true,
+      grade: true,
+      updatedAt: true,
+      lectureTerms: {
+        select: {
+          termNumber: true,
+        },
+        orderBy: {
+          termNumber: "asc",
+        },
+      },
+      schedules: {
+        select: {
+          day: true,
+          time: true,
+        },
+        orderBy: [{ day: "asc" }, { time: "asc" }],
+      },
     },
   });
 
@@ -85,25 +114,52 @@ export const getLectures = async (params?: {
 export const getLectureCatalogPage = async ({
   page,
   pageSize,
+  nameQuery,
+  day,
+  time,
+  academicYear,
 }: {
   page: number;
   pageSize: number;
+  nameQuery?: string;
+  day?: number;
+  time?: number;
+  academicYear: number;
 }): Promise<{ lectures: LectureCatalogItem[]; totalCount: number }> => {
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
   const safePageSize =
     Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : 50;
   const skip = (safePage - 1) * safePageSize;
+  const normalizedNameQuery = nameQuery?.trim();
+
+  const where = {
+    academicYear,
+    isPublic: true,
+    ...(normalizedNameQuery && {
+      name: {
+        contains: normalizedNameQuery,
+        mode: "insensitive" as const,
+      },
+    }),
+    ...((day || time) && {
+      schedules: {
+        some: {
+          ...(day && { day }),
+          ...(time && { time }),
+        },
+      },
+    }),
+  };
 
   const [lectures, totalCount] = await Promise.all([
     prisma.lecture.findMany({
-      where: {
-        isPublic: true,
-      },
+      where,
       orderBy: [{ name: "asc" }, { updatedAt: "desc" }],
       skip,
       take: safePageSize,
       select: {
         id: true,
+        academicYear: true,
         syllabusCode: true,
         name: true,
         instructor: true,
@@ -128,9 +184,7 @@ export const getLectureCatalogPage = async ({
       },
     }),
     prisma.lecture.count({
-      where: {
-        isPublic: true,
-      },
+      where,
     }),
   ]);
 
@@ -164,6 +218,7 @@ export const getLectureCatalogDetail = async (
     },
     select: {
       id: true,
+      academicYear: true,
       syllabusCode: true,
       name: true,
       instructor: true,
@@ -231,9 +286,11 @@ export const getLecturesByTimeAndTerm = async (
   day: number,
   time: number,
   termNumber: number,
+  academicYear?: number,
 ): Promise<Lecture[]> => {
   const lectures = await prisma.lecture.findMany({
     where: {
+      ...(academicYear && { academicYear }),
       schedules: {
         some: {
           day,
@@ -259,10 +316,12 @@ export const createLecture = async (
   data: LectureFormData,
 ): Promise<Lecture> => {
   const userId = await getMe();
+  const currentTerm = await getCurrentTerm();
 
   const lecture = await prisma.$transaction(async tx => {
     const created = await tx.lecture.create({
       data: {
+        academicYear: currentTerm.academicYear,
         name: data.name,
         room: data.room,
         grade: data.grade || 1,
@@ -304,8 +363,7 @@ export const updateLecture = async (
 ): Promise<Lecture> => {
   const userId = await getMe();
 
-  // 権限チェック
-  const existingLecture = await prisma.lecture.findUnique({
+  const lecture = await prisma.lecture.findUnique({
     where: { id: lectureId },
     select: {
       ownerId: true,
@@ -313,72 +371,36 @@ export const updateLecture = async (
     },
   });
 
-  if (!existingLecture) {
+  if (!lecture) {
     throw new NotFoundError("講義");
   }
 
-  // 所有者でない場合、編集可能かチェック
-  if (existingLecture.ownerId !== userId && !existingLecture.isPublicEditable) {
+  const isOwner = lecture.ownerId === userId;
+  const canEdit = isOwner || lecture.isPublicEditable;
+
+  if (!canEdit) {
     throw new ForbiddenError("この講義を編集する権限がありません");
   }
-  const isOwner = existingLecture.ownerId === userId;
 
-  if (
-    !isOwner &&
-    (data.isPublic !== undefined || data.isPublicEditable !== undefined)
-  ) {
-    throw new ForbiddenError("公開設定を変更できるのは講義オーナーのみです");
-  }
-
-  const lecture = await prisma.$transaction(async tx => {
-    const updated = await tx.lecture.update({
-      where: { id: lectureId },
-      data: {
-        ...(data.name && { name: data.name }),
-        ...(data.room !== undefined && { room: data.room }),
-        ...(data.grade !== undefined && { grade: data.grade }),
-        ...(data.instructor !== undefined && {
-          instructor: data.instructor ?? "",
+  const updatedLecture = await prisma.lecture.update({
+    where: { id: lectureId },
+    data: {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.instructor !== undefined && {
+        instructor: data.instructor ?? "",
+      }),
+      ...(data.room !== undefined && { room: data.room }),
+      ...(data.biko !== undefined && { biko: data.biko }),
+      ...(isOwner &&
+        data.isPublic !== undefined && { isPublic: data.isPublic }),
+      ...(isOwner &&
+        data.isPublicEditable !== undefined && {
+          isPublicEditable: data.isPublicEditable,
         }),
-        ...(data.biko !== undefined && { biko: data.biko }),
-        ...(data.syllabusCode !== undefined && {
-          syllabusCode: data.syllabusCode,
-        }),
-        ...(isOwner &&
-          data.isPublic !== undefined && { isPublic: data.isPublic }),
-        ...(isOwner &&
-          data.isPublicEditable !== undefined && {
-            isPublicEditable: data.isPublicEditable,
-          }),
-        ...(data.scheduleIds !== undefined && {
-          schedules: {
-            set: [],
-            connect: data.scheduleIds.map(id => ({ id })),
-          },
-        }),
-      },
-    });
-
-    if (data.termNumbers !== undefined) {
-      await tx.lectureTerm.deleteMany({
-        where: { lectureId },
-      });
-
-      if (data.termNumbers.length > 0) {
-        await tx.lectureTerm.createMany({
-          data: data.termNumbers.map(termNumber => ({
-            lectureId,
-            termNumber,
-          })),
-          skipDuplicates: true,
-        });
-      }
-    }
-
-    return updated;
+    },
   });
 
-  return lecture;
+  return updatedLecture;
 };
 
 /**
@@ -421,9 +443,8 @@ export const canEditLecture = async (lectureId: string): Promise<boolean> => {
   });
 
   if (!lecture) {
-    return false;
+    throw new NotFoundError("講義");
   }
 
-  // 所有者または公開編集可能な場合は編集可能
   return lecture.ownerId === userId || lecture.isPublicEditable;
 };
