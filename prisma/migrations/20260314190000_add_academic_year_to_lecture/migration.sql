@@ -16,3 +16,6 @@ ON "Lecture"("academicYear", "syllabusCode");
 -- CreateIndex
 CREATE INDEX "Lecture_academicYear_name_idx"
 ON "Lecture"("academicYear", "name");
+
+-- AlterTable
+ALTER TABLE "Lecture" ALTER COLUMN "academicYear" DROP DEFAULT;
