@@ -23,10 +23,14 @@ import {
 } from "@yamada-ui/react";
 import { useRef, useState, useTransition } from "react";
 import {
-  importLectureData,
-  validateLectureData,
+  importLectureChunk,
 } from "../actions/lecture-import";
-import type { ImportResult, LectureImportValidationResult } from "../types";
+import {
+  type ImportResult,
+  type LectureImportData,
+  type LectureImportValidationResult,
+  LectureImportSchema,
+} from "../types";
 
 interface LectureImporterProps {
   defaultAcademicYear: number;
@@ -34,13 +38,14 @@ interface LectureImporterProps {
 
 export function LectureImporter({ defaultAcademicYear }: LectureImporterProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [validatedItems, setValidatedItems] = useState<LectureImportData[]>([]);
   const [isPending, startTransition] = useTransition();
   const [validationResult, setValidationResult] =
     useState<LectureImportValidationResult | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [academicYear, setAcademicYear] = useState(String(defaultAcademicYear));
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { withFeedback, showError } = useActionFeedback();
+  const { showError, showSuccess } = useActionFeedback();
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -52,17 +57,55 @@ export function LectureImporter({ defaultAcademicYear }: LectureImporterProps) {
     }
 
     setFile(selectedFile);
+    setValidatedItems([]);
     setValidationResult(null);
     setImportResult(null);
 
-    // Validate the file
+    // Validate the file on the client to avoid large server-action payloads.
     startTransition(async () => {
       try {
         const text = await selectedFile.text();
-        const result = await validateLectureData(text);
-        setValidationResult(result);
+        const raw = JSON.parse(text);
+
+        if (!Array.isArray(raw)) {
+          setValidationResult({
+            valid: false,
+            errors: ["データは配列形式である必要があります"],
+          });
+          return;
+        }
+
+        const errors: string[] = [];
+        const items: LectureImportData[] = [];
+
+        for (let i = 0; i < raw.length; i++) {
+          const parsed = LectureImportSchema.safeParse(raw[i]);
+          if (parsed.success) {
+            items.push(parsed.data);
+          } else {
+            errors.push(
+              `行 ${i + 1}: ${parsed.error.errors.map(e => e.message).join(", ")}`,
+            );
+          }
+        }
+
+        if (errors.length > 0) {
+          setValidatedItems([]);
+          setValidationResult({
+            valid: false,
+            errors,
+          });
+          return;
+        }
+
+        setValidatedItems(items);
+        setValidationResult({
+          valid: true,
+          dataCount: items.length,
+        });
       } catch (error) {
         showError(error as Error);
+        setValidatedItems([]);
         setValidationResult({
           valid: false,
           errors: ["ファイルの読み込みに失敗しました"],
@@ -72,19 +115,50 @@ export function LectureImporter({ defaultAcademicYear }: LectureImporterProps) {
   };
 
   const handleImport = async () => {
-    if (!file || !validationResult?.valid) return;
+    if (!validationResult?.valid || validatedItems.length === 0) return;
 
     startTransition(async () => {
       try {
-        const text = await file.text();
-        const result = await withFeedback(
-          importLectureData(text, Number(academicYear)),
-          {
-            successMessage: "講義データのインポートが完了しました",
-            errorTitle: "インポートに失敗しました",
-          },
-        );
-        setImportResult(result || null);
+        const chunkSize = 50;
+        let lectureCount = 0;
+        const errors: string[] = [];
+
+        for (let i = 0; i < validatedItems.length; i += chunkSize) {
+          const chunk = validatedItems.slice(i, i + chunkSize);
+          const result = await importLectureChunk(chunk, Number(academicYear));
+
+          if (result.lectureCount) {
+            lectureCount += result.lectureCount;
+          }
+          if (result.errors?.length) {
+            errors.push(...result.errors);
+          }
+          if (!result.success && !result.lectureCount) {
+            setImportResult({
+              success: false,
+              message: result.message,
+              lectureCount,
+              errors,
+            });
+            return;
+          }
+        }
+
+        const finalResult: ImportResult = {
+          success: errors.length === 0,
+          message:
+            errors.length === 0
+              ? `${lectureCount}件の講義データをインポートしました`
+              : `${lectureCount}件の講義データをインポートしましたが、${errors.length}件失敗しました`,
+          lectureCount,
+          errors: errors.length > 0 ? errors : undefined,
+        };
+
+        setImportResult(finalResult);
+
+        if (finalResult.success) {
+          showSuccess("講義データのインポートが完了しました");
+        }
       } catch (error) {
         showError(error as Error);
       }
@@ -93,6 +167,7 @@ export function LectureImporter({ defaultAcademicYear }: LectureImporterProps) {
 
   const handleReset = () => {
     setFile(null);
+    setValidatedItems([]);
     setValidationResult(null);
     setImportResult(null);
     if (fileInputRef.current) {

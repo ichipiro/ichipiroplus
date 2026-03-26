@@ -18,14 +18,37 @@ export const validateLectureData = async (
   jsonString: string,
 ): Promise<{
   valid: boolean;
-  data?: LectureImportData[];
+  dataCount?: number;
   errors?: string[];
 }> => {
+  const validation = validateLectureJson(jsonString);
+
+  if (!validation.valid) {
+    return {
+      valid: false,
+      errors: validation.errors,
+    };
+  }
+
+  return {
+    valid: true,
+    dataCount: validation.data.length,
+  };
+};
+
+const validateLectureJson = (
+  jsonString: string,
+):
+  | { valid: true; data: LectureImportData[] }
+  | { valid: false; errors: string[] } => {
   try {
     const jsonData = parseJson<unknown>(jsonString);
 
     if (!Array.isArray(jsonData)) {
-      return { valid: false, errors: ["データは配列形式である必要があります"] };
+      return {
+        valid: false,
+        errors: ["データは配列形式である必要があります"],
+      };
     }
 
     const validatedData: LectureImportData[] = [];
@@ -66,6 +89,22 @@ export const importLectureData = async (
   jsonString: string,
   academicYear: number,
 ): Promise<ImportResult> => {
+  const validation = validateLectureJson(jsonString);
+  if (!validation.valid) {
+    return {
+      success: false,
+      message: "データ検証に失敗しました",
+      errors: validation.errors,
+    };
+  }
+
+  return importLectureChunk(validation.data, academicYear);
+};
+
+export const importLectureChunk = async (
+  data: LectureImportData[],
+  academicYear: number,
+): Promise<ImportResult> => {
   try {
     // セッション情報を事前に取得
     const session = await auth();
@@ -78,18 +117,6 @@ export const importLectureData = async (
     }
     const ownerId = session.user.id;
 
-    // データの検証
-    const validation = await validateLectureData(jsonString);
-
-    if (!validation.valid || !validation.data) {
-      return {
-        success: false,
-        message: "データ検証に失敗しました",
-        errors: validation.errors,
-      };
-    }
-
-    const data = validation.data;
     const departmentMap = await preloadDepartments(prisma, data);
 
     const missingDepartmentErrors = data
