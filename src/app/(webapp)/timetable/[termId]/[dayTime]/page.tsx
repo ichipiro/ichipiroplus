@@ -41,7 +41,6 @@ const TimeSlotPage = async ({ params, searchParams }: TimeSlotPageProps) => {
     <LectureList
       lectures={lectures}
       termId={term.id}
-      currentTermNumber={term.number}
       emptyMessage="この時間帯に登録できる講義はありません。"
     />
   );

@@ -117,6 +117,9 @@ export const getLectureCatalogPage = async ({
   nameQuery,
   day,
   time,
+  termNumber,
+  facultyId,
+  departmentId,
   academicYear,
 }: {
   page: number;
@@ -124,6 +127,9 @@ export const getLectureCatalogPage = async ({
   nameQuery?: string;
   day?: number;
   time?: number;
+  termNumber?: number;
+  facultyId?: string;
+  departmentId?: string;
   academicYear: number;
 }): Promise<{ lectures: LectureCatalogItem[]; totalCount: number }> => {
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
@@ -146,6 +152,21 @@ export const getLectureCatalogPage = async ({
         some: {
           ...(day && { day }),
           ...(time && { time }),
+        },
+      },
+    }),
+    ...(termNumber && {
+      lectureTerms: {
+        some: {
+          termNumber,
+        },
+      },
+    }),
+    ...((facultyId || departmentId) && {
+      departments: {
+        some: {
+          ...(facultyId && { facultyId }),
+          ...(departmentId && { id: departmentId }),
         },
       },
     }),

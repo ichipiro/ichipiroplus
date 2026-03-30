@@ -33,14 +33,12 @@ const formatSchedules = (schedules: { day: number; time: number }[]) => {
 interface LectureListProps {
   lectures: LectureCatalogItem[];
   termId: string;
-  currentTermNumber: number;
   emptyMessage?: string;
 }
 
 const LectureList = async ({
   lectures,
   termId,
-  currentTermNumber,
   emptyMessage = "表示できる講義がありません。",
 }: LectureListProps) => {
   const myRegistrations = await getMyRegistrations(termId);
@@ -182,9 +180,7 @@ const LectureList = async ({
                   termId={termId}
                   isRegistered={registeredLectureIds.has(lecture.id)}
                   registrationId={registrationIdByLectureId.get(lecture.id)}
-                  canRegister={lecture.lectureTerms.some(
-                    term => term.termNumber === currentTermNumber,
-                  )}
+                  canRegister
                 />
               </Td>
             </Tr>
