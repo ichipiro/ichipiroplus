@@ -43,8 +43,14 @@ const RootLayout = ({ children }: { children: ReactNode }) => {
     <html lang="ja" suppressHydrationWarning>
       <body className={notoSansJP.className} suppressHydrationWarning>
         <YamadaUIProvider>
-          <Center>
-            <VStack maxW="9xl" fontSize={{ base: "md", md: "sm" }}>
+          <Center w="full" overflowX="clip">
+            <VStack
+              w="full"
+              minW={0}
+              maxW="9xl"
+              overflowX="clip"
+              fontSize={{ base: "md", md: "sm" }}
+            >
               <Header />
               {children}
               <Footer />

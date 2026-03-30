@@ -12,12 +12,20 @@ type WebappLayoutProps = {
 
 const WebappLayout = ({ children }: WebappLayoutProps) => {
   return (
-    <HStack w="full" minH="100vh" h="full" alignItems="stretch">
+    <HStack
+      w="full"
+      minW={0}
+      minH="100vh"
+      h="full"
+      alignItems="stretch"
+      overflowX="clip"
+    >
       <DesktopNav />
       <MobileNav />
       <VStack
         w="full"
         minW={0}
+        overflowX="clip"
         h="full"
         gap={{ base: "lg", md: "sm" }}
         py={{ base: "lg", md: "sm" }}

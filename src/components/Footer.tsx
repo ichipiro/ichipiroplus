@@ -5,7 +5,13 @@ const Footer = () => {
 
   return (
     <VStack as="footer" py="md" px={{ base: "lg", md: "md" }} mt="lg" w="full">
-      <HStack alignContent="space-between">
+      <HStack
+        w="full"
+        minW={0}
+        justify="space-between"
+        align="start"
+        wrap="wrap"
+      >
         <HStack>
           <VStack gap="xs">
             <Text>
@@ -20,7 +26,7 @@ const Footer = () => {
           </VStack>
         </HStack>
 
-        <VStack align="center" maxW="6xl" mx="auto">
+        <VStack align="center" maxW="6xl" mx="auto" minW={0}>
           <HStack fontSize="sm" color="gray.600" flexWrap="wrap">
             <Link href="/" _hover={{ color: "blue.500" }}>
               ホーム
