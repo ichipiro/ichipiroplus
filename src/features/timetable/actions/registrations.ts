@@ -167,9 +167,6 @@ export const registerForLecture = async (
   if (lecture.academicYear !== term.academicYear) {
     throw new BadRequestError("この年度では登録できない講義です");
   }
-  if (!lecture.lectureTerms.some(lt => lt.termNumber === term.number)) {
-    throw new BadRequestError("この学期では登録できない講義です");
-  }
 
   // 既に登録済みかチェック
   const existing = await prisma.registration.findUnique({

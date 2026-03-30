@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { webpush } from "@/lib/webpush";
 import type { NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { TASK_REMINDER_LABELS } from "@/features/task/constants";
 
 import type {
   NotificationSettingsUpdateRequest,
@@ -528,6 +529,155 @@ export const triggerLectureStartNotifications = async ({
     notifiedUsers: groupedLectureNames.size,
     slot,
     term: activeTerm,
+  };
+};
+
+interface TriggerTaskReminderNotificationsParams {
+  now?: Date;
+  intervalMinutes?: number;
+}
+
+const resolveTaskReminderWindow = (now: Date, intervalMinutes: number) => {
+  const minute = now.getMinutes();
+  const normalizedMinute = minute - (minute % intervalMinutes);
+  const windowStart = new Date(now);
+  windowStart.setMinutes(normalizedMinute, 0, 0);
+
+  const windowEnd = new Date(windowStart);
+  windowEnd.setMinutes(windowEnd.getMinutes() + intervalMinutes);
+
+  return { windowStart, windowEnd };
+};
+
+export const triggerTaskReminderNotifications = async ({
+  now = new Date(),
+  intervalMinutes = 5,
+}: TriggerTaskReminderNotificationsParams = {}) => {
+  const { windowStart, windowEnd } = resolveTaskReminderWindow(
+    now,
+    intervalMinutes,
+  );
+
+  const candidateTasks = await prisma.task.findMany({
+    where: {
+      status: 1,
+      dueDate: {
+        not: null,
+      },
+      user: {
+        subscriptions: {
+          some: {
+            taskReminders: true,
+          },
+        },
+      },
+    },
+    select: {
+      id: true,
+      userId: true,
+      title: true,
+      dueDate: true,
+      reminderOffsets: true,
+      registration: {
+        select: {
+          lecture: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      reminderDeliveries: {
+        select: {
+          offsetMinutes: true,
+          dueDate: true,
+        },
+      },
+    },
+  });
+
+  const deliveriesToCreate: {
+    taskId: string;
+    userId: string;
+    offsetMinutes: number;
+    dueDate: Date;
+    triggeredAt: Date;
+  }[] = [];
+  const totals = {
+    success: 0,
+    failed: 0,
+    errors: [] as string[],
+    notifiedTasks: 0,
+  };
+
+  for (const task of candidateTasks) {
+    const dueDate = task.dueDate;
+
+    if (!dueDate) {
+      continue;
+    }
+
+    for (const offsetMinutes of task.reminderOffsets) {
+      const triggerAt = new Date(dueDate.getTime() - offsetMinutes * 60000);
+
+      if (triggerAt < windowStart || triggerAt >= windowEnd) {
+        continue;
+      }
+
+      const alreadyDelivered = task.reminderDeliveries.some(
+        delivery =>
+          delivery.offsetMinutes === offsetMinutes &&
+          delivery.dueDate.getTime() === dueDate.getTime(),
+      );
+
+      if (alreadyDelivered) {
+        continue;
+      }
+
+      const reminderLabel =
+        TASK_REMINDER_LABELS[
+          offsetMinutes as keyof typeof TASK_REMINDER_LABELS
+        ] ?? `${offsetMinutes}分前`;
+      const lectureName = task.registration?.lecture.name;
+      const title = "タスク通知";
+      const body = lectureName
+        ? `${lectureName}の「${task.title}」が${reminderLabel}です`
+        : `「${task.title}」が${reminderLabel}です`;
+
+      const result = await sendPushNotification({
+        userId: task.userId,
+        title,
+        body,
+        url: "/tasks",
+        notificationType: "task",
+      });
+
+      totals.success += result.success;
+      totals.failed += result.failed;
+      totals.errors.push(...result.errors);
+      totals.notifiedTasks += 1;
+
+      deliveriesToCreate.push({
+        taskId: task.id,
+        userId: task.userId,
+        offsetMinutes,
+        dueDate,
+        triggeredAt: triggerAt,
+      });
+    }
+  }
+
+  if (deliveriesToCreate.length > 0) {
+    await prisma.taskReminderDelivery.createMany({
+      data: deliveriesToCreate,
+      skipDuplicates: true,
+    });
+  }
+
+  return {
+    ...totals,
+    windowStart,
+    windowEnd,
   };
 };
 

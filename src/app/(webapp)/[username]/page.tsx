@@ -106,6 +106,7 @@ const ProfilePage = async ({ params, searchParams }: ProfilePageProps) => {
           {activeTab === "timetable" && (
             <SharedTimetableSection
               userId={profileData.id}
+              username={profileData.username}
               displayName={profileData.displayName || profileData.username}
               isOwner={isOwner}
               isTimetablePublic={profileData.isTimetablePublic}

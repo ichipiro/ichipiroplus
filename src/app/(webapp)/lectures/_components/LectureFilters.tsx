@@ -1,23 +1,54 @@
 "use client";
 
 import { DAYS, DAY_LABELS, TIMES } from "@/features/timetable/constant";
-import { Button, Flex, HStack, Input, Option, Select } from "@yamada-ui/react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Button, Flex, Input, Option, Select } from "@yamada-ui/react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 type Props = {
   initialQ?: string;
   initialDay?: number;
   initialTime?: number;
+  initialTermNumber?: number;
+  initialFacultyId?: string;
+  initialDepartmentId?: string;
+  faculties: { id: string; name: string }[];
+  departments: { id: string; name: string; facultyId: string }[];
+  terms: { id: string; academicYear: number; number: number; name: string }[];
 };
 
-const LectureFilters = ({ initialQ, initialDay, initialTime }: Props) => {
+const LectureFilters = ({
+  initialQ,
+  initialDay,
+  initialTime,
+  initialTermNumber,
+  initialFacultyId,
+  initialDepartmentId,
+  faculties,
+  departments,
+  terms,
+}: Props) => {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [q, setQ] = useState(initialQ ?? "");
   const [day, setDay] = useState(initialDay ? String(initialDay) : "");
   const [time, setTime] = useState(initialTime ? String(initialTime) : "");
+  const [termNumber, setTermNumber] = useState(
+    initialTermNumber ? String(initialTermNumber) : "",
+  );
+  const [facultyId, setFacultyId] = useState(initialFacultyId ?? "");
+  const [departmentId, setDepartmentId] = useState(initialDepartmentId ?? "");
 
-  const applyFilters = () => {
+  const departmentOptions = useMemo(
+    () =>
+      departments.filter(department =>
+        facultyId ? department.facultyId === facultyId : true,
+      ),
+    [departments, facultyId],
+  );
+
+  const queryString = useMemo(() => {
     const params = new URLSearchParams();
 
     if (q.trim()) {
@@ -29,16 +60,49 @@ const LectureFilters = ({ initialQ, initialDay, initialTime }: Props) => {
     if (time) {
       params.set("time", time);
     }
+    if (termNumber) {
+      params.set("termNumber", termNumber);
+    }
+    if (facultyId) {
+      params.set("facultyId", facultyId);
+    }
+    if (departmentId) {
+      params.set("departmentId", departmentId);
+    }
 
-    const query = params.toString();
-    router.push(query ? `/lectures?${query}` : "/lectures");
-  };
+    return params.toString();
+  }, [q, day, time, termNumber, facultyId, departmentId]);
+
+  useEffect(() => {
+    if (
+      departmentId &&
+      !departmentOptions.some(item => item.id === departmentId)
+    ) {
+      setDepartmentId("");
+    }
+  }, [departmentId, departmentOptions]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      const currentQuery = searchParams.toString();
+      if (queryString === currentQuery) return;
+
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname);
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [pathname, queryString, router, searchParams]);
 
   const clearFilters = () => {
     setQ("");
     setDay("");
     setTime("");
-    router.push("/lectures");
+    setTermNumber("");
+    setFacultyId("");
+    setDepartmentId("");
+    router.replace(pathname);
   };
 
   return (
@@ -50,12 +114,6 @@ const LectureFilters = ({ initialQ, initialDay, initialTime }: Props) => {
         flex="1 1 18rem"
         minW="16rem"
         size="sm"
-        onKeyDown={event => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            applyFilters();
-          }
-        }}
       />
 
       <Select
@@ -68,6 +126,48 @@ const LectureFilters = ({ initialQ, initialDay, initialTime }: Props) => {
         {DAYS.map(d => (
           <Option key={d} value={String(d)}>
             {DAY_LABELS[d]}曜
+          </Option>
+        ))}
+      </Select>
+
+      <Select
+        value={termNumber}
+        onChange={value => setTermNumber(String(value))}
+        w="9rem"
+        size="sm"
+      >
+        <Option value="">ターム: すべて</Option>
+        {terms.map(term => (
+          <Option key={term.id} value={String(term.number)}>
+            第{term.number}ターム
+          </Option>
+        ))}
+      </Select>
+
+      <Select
+        value={facultyId}
+        onChange={value => setFacultyId(String(value))}
+        w="12rem"
+        size="sm"
+      >
+        <Option value="">学部: すべて</Option>
+        {faculties.map(faculty => (
+          <Option key={faculty.id} value={faculty.id}>
+            {faculty.name}
+          </Option>
+        ))}
+      </Select>
+
+      <Select
+        value={departmentId}
+        onChange={value => setDepartmentId(String(value))}
+        w="14rem"
+        size="sm"
+      >
+        <Option value="">学科: すべて</Option>
+        {departmentOptions.map(department => (
+          <Option key={department.id} value={department.id}>
+            {department.name}
           </Option>
         ))}
       </Select>
@@ -86,14 +186,9 @@ const LectureFilters = ({ initialQ, initialDay, initialTime }: Props) => {
         ))}
       </Select>
 
-      <HStack gap={2} ms="auto">
-        <Button colorScheme="primary" size="sm" onClick={applyFilters}>
-          検索
-        </Button>
-        <Button variant="outline" size="sm" onClick={clearFilters}>
-          クリア
-        </Button>
-      </HStack>
+      <Button variant="outline" size="sm" ms="auto" onClick={clearFilters}>
+        クリア
+      </Button>
     </Flex>
   );
 };
