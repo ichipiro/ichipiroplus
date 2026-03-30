@@ -1,12 +1,14 @@
 import { getTimetableByUserId } from "@/features/timetable/actions/sharing";
-import { Text, VStack } from "@yamada-ui/react";
+import { HStack, Text, VStack } from "@yamada-ui/react";
 import { Suspense } from "react";
 import CopyTimetableButton from "./CopyTimetableButton";
+import TimetableShareQrButton from "./TimetableShareQrButton";
 import TimetableGrid from "./TimetableGrid";
 import UserTimetablePicker from "./UserTimetablePicker";
 
 interface SharedTimetableSectionProps {
   userId: string;
+  username: string;
   displayName: string;
   isOwner: boolean;
   isTimetablePublic: boolean;
@@ -16,6 +18,7 @@ interface SharedTimetableSectionProps {
 
 const SharedTimetableSection = async ({
   userId,
+  username,
   displayName,
   isOwner,
   isTimetablePublic,
@@ -43,12 +46,20 @@ const SharedTimetableSection = async ({
         <UserTimetablePicker terms={terms} selectedTermId={selectedTermId} />
       </Suspense>
 
-      {!isOwner && canViewTimetable && (
-        <CopyTimetableButton
-          sourceUserId={userId}
-          sourceDisplayName={displayName}
-          termId={selectedTermId}
-        />
+      {canViewTimetable && (
+        <HStack wrap="wrap">
+          {!isOwner && (
+            <CopyTimetableButton
+              sourceUserId={userId}
+              sourceDisplayName={displayName}
+              termId={selectedTermId}
+            />
+          )}
+          <TimetableShareQrButton
+            sharePath={`/${username}?tab=timetable&termId=${selectedTermId}`}
+            isPublic={isTimetablePublic}
+          />
+        </HStack>
       )}
 
       {!canViewTimetable && (

@@ -1,6 +1,8 @@
 import { getTerm } from "@/features/timetable/actions/terms";
 import TimetableGrid from "@/features/timetable/components/TimetableGrid";
 import TimetablePicker from "@/features/timetable/components/TimetablePicker";
+import TimetableShareQrButton from "@/features/timetable/components/TimetableShareQrButton";
+import { getCurrentUser } from "@/features/user/actions";
 import {
   Box,
   HStack,
@@ -19,16 +21,23 @@ interface TimeTablePageProps {
 
 const TimeTablePage = async ({ params }: TimeTablePageProps) => {
   const { termId } = await params;
-  const term = await getTerm(termId);
+  const [term, currentUser] = await Promise.all([
+    getTerm(termId),
+    getCurrentUser(),
+  ]);
 
   return (
     <VStack alignItems="center" gap={4}>
       {/* ヘッダー部分 */}
       <Box w="full" maxW="1200px">
-        <HStack justify="space-between" mb={4}>
-          <Heading size="lg">
+        <HStack justify="space-between" mb={4} wrap="wrap" gap={3}>
+          <Heading size="lg" flex="1">
             {term.academicYear}年度 第{term.number}ターム
           </Heading>
+          <TimetableShareQrButton
+            sharePath={`/${currentUser.username}?tab=timetable&termId=${termId}`}
+            isPublic={currentUser.isTimetablePublic}
+          />
         </HStack>
       </Box>
 
