@@ -1,0 +1,29 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/lecture-starts",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/lecture-starts",
+      "schedule": "40 1 * * *"
+    },
+    {
+      "path": "/api/cron/lecture-starts",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/lecture-starts",
+      "schedule": "40 5 * * *"
+    },
+    {
+      "path": "/api/cron/lecture-starts",
+      "schedule": "20 7 * * *"
+    },
+    {
+      "path": "/api/cron/task-reminders",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
