@@ -1,7 +1,6 @@
 "use client";
 
 import { QrCodeIcon } from "@yamada-ui/lucide";
-import { QRCodeSVG } from "qrcode.react";
 import {
   Box,
   Button,
@@ -14,6 +13,7 @@ import {
   VStack,
   useDisclosure,
 } from "@yamada-ui/react";
+import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 
 type TimetableShareQrButtonProps = {
