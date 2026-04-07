@@ -195,8 +195,8 @@ export const uploadImage = async (data: {
       }),
     );
 
-    // パブリックURLを返す
-    return `${process.env.S3_PUBLIC_URL}/${process.env.S3_BUCKET}/${key}`;
+    const publicBaseUrl = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "");
+    return `${publicBaseUrl}/${key}`;
   } catch (error) {
     console.error("Failed to upload image - detailed error:", error);
     if (error instanceof Error) {
