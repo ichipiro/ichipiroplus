@@ -195,7 +195,18 @@ export const uploadImage = async (data: {
       }),
     );
 
-    const publicBaseUrl = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "");
+    const useSsl = process.env.S3_USE_SSL === "true";
+    let publicBaseUrl = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "") ?? "";
+
+    if (
+      useSsl &&
+      publicBaseUrl &&
+      !publicBaseUrl.startsWith("http://") &&
+      !publicBaseUrl.startsWith("https://")
+    ) {
+      publicBaseUrl = `https://${publicBaseUrl}`;
+    }
+
     return `${publicBaseUrl}/${key}`;
   } catch (error) {
     console.error("Failed to upload image - detailed error:", error);
