@@ -5,7 +5,6 @@ import type {
   UserWithRelations,
 } from "@/features/user/types";
 import { Card, CardBody, CardHeader, Heading } from "@yamada-ui/react";
-import { useRouter } from "next/navigation";
 
 interface StepProfileProps {
   onStepNext: () => void;
@@ -21,9 +20,8 @@ const StepProfile = ({
   faculties,
   user,
   userId,
+  onStepNext,
 }: StepProfileProps) => {
-  const router = useRouter();
-
   // 初回登録時は空のユーザーオブジェクトを作成
   const currentUser: UserWithRelations = user ?? {
     id: userId,
@@ -63,8 +61,7 @@ const StepProfile = ({
           faculties={faculties}
           user={currentUser}
           onSuccess={() => {
-            router.push("/dashboard");
-            router.refresh();
+            onStepNext();
           }}
           isFirst
         />

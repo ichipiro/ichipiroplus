@@ -11,7 +11,11 @@ interface RegistrationStepperProps {
 }
 
 const RegistrationStepper = ({ renderItem }: RegistrationStepperProps) => {
-  const steps: Steps = [{ title: "はじめに" }, { title: "プロフィール設定" }];
+  const steps: Steps = [
+    { title: "はじめに" },
+    { title: "プロフィール設定" },
+    { title: "通知設定" },
+  ];
 
   const { activeStep, onStepNext, onStepPrev } = useSteps({
     index: 0,

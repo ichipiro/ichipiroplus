@@ -173,6 +173,8 @@ const TodayLectureRow = ({
               textDecoration: "none",
               position: "relative",
               zIndex: 1,
+              minWidth: 0,
+              flex: 1,
             }}
           >
             <Text
@@ -181,6 +183,7 @@ const TodayLectureRow = ({
               whiteSpace="nowrap"
               overflow="hidden"
               textOverflow="ellipsis"
+              minW={0}
             >
               {registration.lecture.name}
             </Text>
@@ -189,7 +192,11 @@ const TodayLectureRow = ({
             fontSize="sm"
             color="gray.600"
             whiteSpace="nowrap"
-            flexShrink={0}
+            overflow="hidden"
+            textOverflow="ellipsis"
+            maxW={{ base: "9rem", md: "6.5rem" }}
+            flexShrink={1}
+            minW={0}
           >
             {registration.lecture.room || "教室未設定"}
           </Text>
