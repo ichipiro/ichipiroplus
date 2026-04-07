@@ -8,6 +8,7 @@ import type {
 } from "@/features/user/types";
 import RegistrationStepper from "../RegistrationStepper";
 import StepIntro from "../StepIntro";
+import StepNotification from "../StepNotification";
 import StepProfile from "../StepProfile";
 
 interface RegistrationStepsProps {
@@ -36,6 +37,7 @@ const RegistrationSteps = ({
           onStepNext={onStepNext}
           onStepPrev={onStepPrev}
         />,
+        <StepNotification key={3} onStepPrev={onStepPrev} />,
       ]}
     />
   );

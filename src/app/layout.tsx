@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import type { ReactNode } from "react";
 import Footer from "../components/Footer";
+import PwaInstallPrompt from "../components/PwaInstallPrompt";
 import YamadaUIProvider from "../components/YamadaUIProvider";
 import "./globals.css";
 
@@ -43,15 +44,15 @@ const RootLayout = ({ children }: { children: ReactNode }) => {
     <html lang="ja" suppressHydrationWarning>
       <body className={notoSansJP.className} suppressHydrationWarning>
         <YamadaUIProvider>
-          <Center w="full" overflowX="clip">
+          <Center w="full">
             <VStack
               w="full"
               minW={0}
               maxW="9xl"
-              overflowX="clip"
               fontSize={{ base: "md", md: "sm" }}
             >
               <Header />
+              <PwaInstallPrompt />
               {children}
               <Footer />
             </VStack>
