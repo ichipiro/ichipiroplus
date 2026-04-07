@@ -97,12 +97,15 @@ const StepNotification = ({ onStepPrev }: StepNotificationProps) => {
                 borderRadius="md"
                 px={4}
                 py={4}
-                bg={isSubscribed ? "primary.50" : undefined}
+                bg={isSubscribed ? ["primary.50", "primary.900"] : undefined}
+                borderColor={
+                  isSubscribed ? ["primary.200", "primary.700"] : undefined
+                }
               >
                 <HStack justifyContent="space-between" alignItems="center">
                   <VStack align="start" gap={1}>
                     <Heading size="sm">プッシュ通知</Heading>
-                    <Text fontSize="sm" color="gray.600">
+                    <Text fontSize="sm" color={["gray.600", "gray.300"]}>
                       講義通知とタスク通知をまとめて有効化します
                     </Text>
                   </VStack>

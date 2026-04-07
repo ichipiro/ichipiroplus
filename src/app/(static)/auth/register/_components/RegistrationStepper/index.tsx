@@ -13,8 +13,8 @@ interface RegistrationStepperProps {
 const RegistrationStepper = ({ renderItem }: RegistrationStepperProps) => {
   const steps: Steps = [
     { title: "はじめに" },
-    { title: "プロフィール設定" },
-    { title: "通知設定" },
+    { title: "プロフィール" },
+    { title: "通知" },
   ];
 
   const { activeStep, onStepNext, onStepPrev } = useSteps({
@@ -29,8 +29,9 @@ const RegistrationStepper = ({ renderItem }: RegistrationStepperProps) => {
         index={activeStep}
         steps={steps}
         size={{ base: "lg", md: "sm" }}
-        maxW={"md"}
+        w={{ base: "4xl", md: "sm" }}
         orientation="horizontal"
+        mb={6}
       />
       {renderItem({ onStepNext, onStepPrev })[activeStep]}
     </>

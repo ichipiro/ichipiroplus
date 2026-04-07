@@ -29,6 +29,10 @@ export default auth(async req => {
   }
 
   if (isAuthenticated && isProfileComplete && isAuthRoute) {
+    if (isRegisterPage) {
+      return NextResponse.next();
+    }
+
     if (isLoginPage && req.nextUrl.searchParams.get("callbackUrl")) {
       const redirectUrl =
         req.nextUrl.searchParams.get("callbackUrl") || "/dashboard";

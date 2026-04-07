@@ -190,8 +190,36 @@ export const checkUsernameAvailability = async (
 export const deleteAccount = async (): Promise<void> => {
   const id = await getMe();
 
-  await prisma.user.delete({
-    where: { id },
+  if (id === "system") {
+    throw new ConflictError("systemユーザーは削除できません");
+  }
+
+  await prisma.$transaction(async tx => {
+    await tx.user.upsert({
+      where: { id: "system" },
+      update: {
+        username: "__system__",
+        displayName: "System",
+        isProfileComplete: true,
+        isAdmin: true,
+      },
+      create: {
+        id: "system",
+        username: "__system__",
+        displayName: "System",
+        isProfileComplete: true,
+        isAdmin: true,
+      },
+    });
+
+    await tx.lecture.updateMany({
+      where: { ownerId: id },
+      data: { ownerId: "system" },
+    });
+
+    await tx.user.delete({
+      where: { id },
+    });
   });
 };
 
