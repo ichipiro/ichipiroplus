@@ -1,3 +1,4 @@
+import { getTimetableByUserId } from "@/features/timetable/actions/sharing";
 import { getTerm } from "@/features/timetable/actions/terms";
 import TimetableGrid from "@/features/timetable/components/TimetableGrid";
 import TimetablePicker from "@/features/timetable/components/TimetablePicker";
@@ -25,6 +26,11 @@ const TimeTablePage = async ({ params }: TimeTablePageProps) => {
     getTerm(termId),
     getCurrentUser(),
   ]);
+  const timetableData = await getTimetableByUserId({
+    userId: currentUser.id,
+    includePrivate: true,
+    termId,
+  });
 
   return (
     <VStack alignItems="center" gap={4}>
@@ -83,7 +89,7 @@ const TimeTablePage = async ({ params }: TimeTablePageProps) => {
       </Box>
 
       {/* 時間割グリッド */}
-      <TimetableGrid termId={termId} />
+      <TimetableGrid termId={termId} items={timetableData.items} />
     </VStack>
   );
 };

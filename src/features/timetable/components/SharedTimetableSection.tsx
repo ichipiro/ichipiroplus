@@ -73,7 +73,11 @@ const SharedTimetableSection = async ({
         )}
 
       {canViewTimetable && timetableData && timetableData.items.length > 0 && (
-        <TimetableGrid termId={selectedTermId} readonly targetUserId={userId} />
+        <TimetableGrid
+          termId={selectedTermId}
+          readonly
+          items={timetableData.items}
+        />
       )}
     </VStack>
   );

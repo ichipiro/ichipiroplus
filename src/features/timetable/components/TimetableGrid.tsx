@@ -1,6 +1,7 @@
 import { Grid, GridItem, Text, VStack } from "@yamada-ui/react";
 import Link from "next/link";
 import React from "react";
+import type { SharedTimetableRegistration } from "../actions/sharing";
 import { DAYS, TIMES, TIMES_VALUE, WEEKDAY_LABELS } from "../constant";
 import { getScheduleKey } from "../utils";
 import TimetableCell from "./TimetableCell";
@@ -8,14 +9,23 @@ import TimetableCell from "./TimetableCell";
 interface TimeTableGridProps {
   termId: string;
   readonly?: boolean;
-  targetUserId?: string;
+  items: SharedTimetableRegistration[];
 }
 
 const TimeTableGrid = ({
   termId,
   readonly = false,
-  targetUserId,
+  items,
 }: TimeTableGridProps) => {
+  const lectureByScheduleKey = new Map(
+    items.flatMap(item =>
+      item.lecture.schedules.map(schedule => [
+        getScheduleKey(schedule.day, schedule.time),
+        item.lecture,
+      ]),
+    ),
+  );
+
   return (
     <Grid
       templateColumns={{
@@ -60,9 +70,7 @@ const TimeTableGrid = ({
                   justifyContent="center"
                 >
                   <TimetableCell
-                    termId={termId}
-                    scheduleKey={key}
-                    targetUserId={targetUserId}
+                    lecture={lectureByScheduleKey.get(key)}
                     readonly={readonly}
                   />
                 </VStack>
@@ -74,7 +82,11 @@ const TimeTableGrid = ({
             }
 
             return (
-              <Link href={`/timetable/${termId}/${key}`} key={key} passHref>
+              <Link
+                href={`/timetable/${termId}/${key}`}
+                key={key}
+                passHref
+              >
                 {cell}
               </Link>
             );
