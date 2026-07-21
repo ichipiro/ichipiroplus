@@ -1,32 +1,14 @@
 import { Text } from "@yamada-ui/react";
-import {
-  getLectureById,
-  getRegistrationByScheduleForUser,
-  getRegistrationsBySchedule,
-} from "../actions";
 
 type TimetableCellProps = {
-  termId: string;
-  scheduleKey: number;
-  targetUserId?: string;
+  lecture?: { name: string; room: string | null };
   readonly?: boolean;
 };
 
-const TimetableCell = async ({
-  termId,
-  scheduleKey,
-  targetUserId,
-  readonly = false,
-}: TimetableCellProps) => {
-  const registration = targetUserId
-    ? await getRegistrationByScheduleForUser(scheduleKey, termId, targetUserId)
-    : await getRegistrationsBySchedule(scheduleKey, termId);
-
-  if (!registration) {
+const TimetableCell = ({ lecture, readonly = false }: TimetableCellProps) => {
+  if (!lecture) {
     return <Text color="gray.500">{readonly ? "-" : "クリックして追加"}</Text>;
   }
-
-  const lecture = await getLectureById(registration.lectureId);
 
   return (
     <>
